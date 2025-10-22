@@ -1,0 +1,4 @@
+netifaces==0.11.0
+json_repair==0.47.1
+cryptography==44.0.0
+schedule==1.2.2
