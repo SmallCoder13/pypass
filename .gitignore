@@ -2,13 +2,15 @@ data/
 .idea/
 .venv/
 
-passwordmanager/CHANGELOG
-passwordmanager/venv/
-passwordmanager/src/passwordmanager/wordlist.json
-passwordmanager/src/passwordmanager/test.py
+pypass/CHANGELOG
+pypass/venv/
+pypass/.venv/
+pypass/src/pypass/wordlist.json
+pypass/src/pypass/test.py
 
-passwordmanager-server/.venv/
-passwordmanager-server/.idea/
-passwordmanager-server/data/
-passwordmanager-server/logs/
-passwordmanager-server/test_new_encryption.py
+pypass-server/.venv/
+pypass-server/.idea/
+pypass-server/venv/
+pypass-server/data/
+pypass-server/logs/
+pypass-server/test_new_encryption.py
