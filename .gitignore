@@ -2,11 +2,12 @@ data/
 .idea/
 .venv/
 
-pypass/CHANGELOG
 pypass/venv/
 pypass/.venv/
-pypass/src/pypass/wordlist.json
+pypass/build/
+pypass/CHANGELOG
 pypass/src/pypass/test.py
+pypass/src/pypass/wordlist.json
 
 pypass-server/.venv/
 pypass-server/.idea/

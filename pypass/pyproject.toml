@@ -13,6 +13,10 @@ formal_name = "PyPass"
 description = "A Password Manager Written in Python"
 long_description = """More details about the app should go here.
 """
+
+icon="icons/PyPass"
+splash_background_color = '#02ADFF'
+
 sources = [
     "src/pypass",
 ]
