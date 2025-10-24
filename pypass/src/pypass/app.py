@@ -3841,7 +3841,7 @@ class PyPass(toga.App):
             )
 
             await self.dialog(dialog)
-            return None
+            return self.return_to_home_screen()
 
         server_title = self.server_title_entry.value
 
@@ -3856,12 +3856,12 @@ class PyPass(toga.App):
         )
 
         if not is_valid:
-            return None
+            return self.return_to_home_screen()
 
         server_exists = await self.check_for_server(server_title)
 
         if not server_exists:
-            return None
+            return self.return_to_home_screen()
 
         if not "data" in user_data.keys():
             dialog = toga.ErrorDialog(
@@ -3870,10 +3870,20 @@ class PyPass(toga.App):
             )
 
             await self.dialog(dialog)
-            return None
+            return self.return_to_home_screen()
 
-        for_server = {}
-        server_cipher = Fernet(self.server_key)
+        try:
+            for_server = {}
+            server_cipher = Fernet(self.server_key)
+
+        except ValueError:
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="The server sent an invalid key. Please restart the app, and try again"
+            )
+
+            await self.dialog(dialog)
+            return self.return_to_home_screen()
 
         for service in user_data["data"].keys():
             for username in user_data["data"][service].keys():
@@ -3965,7 +3975,18 @@ class PyPass(toga.App):
 
             await asyncio.to_thread(self.server.sendall, self.user_entry.value.encode())
             encrypted_server_key = await asyncio.to_thread(self.server.recv, 1024)
-            self.server_key = self.main_fernet.decrypt(encrypted_server_key)
+
+            try:
+                self.server_key = self.main_fernet.decrypt(encrypted_server_key)
+
+            except ValueError:
+                dialog = toga.ErrorDialog(
+                    title=self.error_title,
+                    message="The server sent an invalid key. Please restart the app, and try again"
+                )
+
+                await self.dialog(dialog)
+                return self.return_to_home_screen()
 
         if self.server is None:
             dialog = toga.ErrorDialog(
@@ -4121,8 +4142,18 @@ class PyPass(toga.App):
         await asyncio.to_thread(self.server.sendall, os.environ["MAIN_KEY"].encode())
         print("Sent logged in user and main key")
 
-        encrypted_server_key = await asyncio.to_thread(self.server.recv, 1024)
-        self.server_key = self.main_fernet.decrypt(encrypted_server_key)
+        try:
+            encrypted_server_key = await asyncio.to_thread(self.server.recv, 1024)
+            self.server_key = self.main_fernet.decrypt(encrypted_server_key)
+
+        except ValueError:
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="The server sent an invalid key. Please restart the app, and try again"
+            )
+
+            await self.dialog(dialog)
+            return self.return_to_home_screen()
 
         dialog = toga.InfoDialog(
             title=self.success_title,
