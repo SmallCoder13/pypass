@@ -3,10 +3,13 @@ data/
 .venv/
 
 pypass/venv/
+pypass/logs/
 pypass/.venv/
 pypass/build/
 pypass/CHANGELOG
 pypass/src/pypass/test.py
+pypass/src/pypass.dist-info/
+pypass/src/pypass/__pycache__/
 pypass/src/pypass/wordlist.json
 
 pypass-server/.venv/

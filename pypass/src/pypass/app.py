@@ -1,7 +1,7 @@
 """
 A Password Manager Written in Python
 """
-
+import httpx
 # Data Structure
 
 # /
@@ -26,25 +26,32 @@ A Password Manager Written in Python
 #   }
 # }
 
-# TODO: Finish updating the server code to use encrypted keys. next step, update download password from server functionality
+# TODO: Add way to determine whether or not device is sending data, or receiving data for data migration
 
 # TODO: Finish the password syncing method, add a way for the user to decide to upload passwords,
 #  download passwords, or recursively upload or download. Integrate password requests on server
 
+# Window related imports
 import toga
-from cryptography import fernet
 from toga.style import Pack
 
+# App related imports
 import json
 import random
-import socket
 import os.path
 import asyncio
 import secrets
 import textwrap
 import json_repair
 import cryptography.fernet
+from functools import partial
+from cryptography import fernet
 from cryptography.fernet import Fernet
+
+# Data migration imports
+import socket
+import uvicorn
+from fastapi import FastAPI
 
 from pprint import pprint as print
 
@@ -54,6 +61,34 @@ if toga.platform.current_platform.lower() == "android" or "window" in toga.platf
 else:
     import pyperclip
 
+
+    class FastAPIMigrationApp:
+        def __init__(self, server_host: str = "0.0.0.0", server_port: int = 9001):
+            self.fastapi = FastAPI()
+            uvicorn.run(self.fastapi, host=server_host, port=server_port)
+
+            @self.fastapi.post("/")
+            def receive_user_data(current_user: str, user_data: str, main_key: str):
+                user_data = json.loads(user_data)
+
+                env_data = json_repair.from_file(os.path.join(toga.App().paths.data, ".env"))
+                env_data["MAIN_KEY"] = main_key
+
+                with open(os.path.join(toga.App().paths.data, current_user, ".passwords.json"), mode="w") as passwords_file:
+                    json.dump(user_data, passwords_file)
+
+
+                with open(os.path.join(toga.App().paths.data, ".env"), mode="w") as env_file:
+                    json.dump(env_data, env_file)
+
+                os.environ['MIGRATION_SUCCESSFUL'] = "true"
+
+                return {
+                    "success": True,
+                    "messages": None
+                }
+
+            self.fastapi.add_api_route("/{current_user}/{user_data}/{main_key}", receive_user_data, methods=["POST"])
 
 class PyPass(toga.App):
     # --------------------- App related functions ---------------------#
@@ -2943,6 +2978,8 @@ class PyPass(toga.App):
 
             self.return_to_home_screen()
 
+            await self.migrate_data(_=None)
+
             return None
 
         else:
@@ -3364,6 +3401,94 @@ class PyPass(toga.App):
             clear_screen=True
         )
 
+    async def migrate_data(self, _=None, send_data=False):
+        if send_data:
+            user = self.logged_in_user
+            main_key = os.environ.get("MAIN_KEY")
+            user_data = json.dumps(self.load_user_passwords())
+
+            result = httpx.post(f"http://{self.to_device_address_input.value}:{self.to_device_port_input.value}/{user}/{user_data}/{main_key}")
+            result.raise_for_status()
+
+            print(result.status_code)
+        
+        dialog = toga.QuestionDialog(
+            title=self.confirm_title,
+            message="Do you want to receive or send data? Select 'No' to receive data, and 'Yes' to send data"
+        )
+        
+        dialog_result = await self.dialog(dialog)
+
+        print(dialog_result)
+        
+        if dialog_result:
+            print("Defining widgets")
+
+            to_device_address_label = toga.Label(
+                text="Please enter the address of the receiving device",
+                style=self.label_style
+            )
+
+            self.to_device_address_input = toga.TextInput(style=self.input_style)
+
+            to_device_port_label = toga.Label(
+                text="Please enter the port of the receiving device",
+                style=self.label_style
+            )
+
+            self.to_device_port_input = toga.TextInput(style=self.input_style)
+
+            send_data_button = toga.Button(
+                text="Send data to receiving device",
+                on_press=partial(self.migrate_data, send_data=True),
+                style=self.button_style
+            )
+
+            print("Adding widgets to screen")
+
+            await asyncio.to_thread(
+                self.add_to_screen,
+                widgets=[
+                    to_device_address_label,
+                    self.to_device_address_input,
+                    to_device_port_label,
+                    self.to_device_port_input,
+                    send_data_button
+                ],
+                clear_screen=True
+            )
+            
+        else:
+            dialog = toga.QuestionDialog(
+                title=self.confirm_title,
+                message="THIS WILL REPLACE ALL PASSWORDS SAVED ON THIS DEVICE. Are you sure you want to continue?"
+            )
+    
+            dialog_result = await self.dialog(dialog)
+    
+            if dialog_result:
+                FastAPIMigrationApp()
+    
+                while os.environ.get("MIGRATION_SUCCESSFUL") is None:
+                    await asyncio.sleep(10)
+    
+                dialog = toga.InfoDialog(
+                    title=self.success_title,
+                    message="Successfully migrated data"
+                )
+    
+                await self.dialog(dialog)
+    
+            else:
+                dialog = toga.InfoDialog(
+                    title=self.success_title,
+                    message="Data migration has been cancelled"
+                )
+    
+                await self.dialog(dialog)
+
+        # return self.return_to_home_screen()
+
     def load_user_passwords(self, check_data_integrity=True) -> dict:
         username = self.user_entry.value
         password_file_path = os.path.join(self.paths.data, username, ".passwords.json")
@@ -3482,8 +3607,7 @@ class PyPass(toga.App):
 
         else:
             return user_data
-
-    # --------------------- Server related functions ---------------------#
+# --------------------- Server related functions ---------------------#
 
     async def collect_server_data(self, command_called: toga.Command):
         if self.logged_in_user is None:
