@@ -24,7 +24,7 @@ test_sources = [
     "tests",
 ]
 
-requires = ["json_repair", "cryptography"
+requires = ["json_repair", "cryptography", "uvicorn", "fastapi"
 ]
 test_requires = [
     "pytest",

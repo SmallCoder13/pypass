@@ -2976,11 +2976,7 @@ class PyPass(toga.App):
 
             print(self.main_window.size)
 
-            self.return_to_home_screen()
-
-            await self.migrate_data(_=None)
-
-            return None
+            return self.return_to_home_screen()
 
         else:
             dialog = toga.ErrorDialog(
