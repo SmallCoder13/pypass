@@ -50,8 +50,6 @@ from cryptography.fernet import Fernet
 
 # Data migration imports
 import socket
-import uvicorn
-from fastapi import FastAPI
 
 from pprint import pprint as print
 
@@ -62,33 +60,33 @@ else:
     import pyperclip
 
 
-    class FastAPIMigrationApp:
-        def __init__(self, server_host: str = "0.0.0.0", server_port: int = 9001):
-            self.fastapi = FastAPI()
-            uvicorn.run(self.fastapi, host=server_host, port=server_port)
-
-            @self.fastapi.post("/")
-            def receive_user_data(current_user: str, user_data: str, main_key: str):
-                user_data = json.loads(user_data)
-
-                env_data = json_repair.from_file(os.path.join(toga.App().paths.data, ".env"))
-                env_data["MAIN_KEY"] = main_key
-
-                with open(os.path.join(toga.App().paths.data, current_user, ".passwords.json"), mode="w") as passwords_file:
-                    json.dump(user_data, passwords_file)
-
-
-                with open(os.path.join(toga.App().paths.data, ".env"), mode="w") as env_file:
-                    json.dump(env_data, env_file)
-
-                os.environ['MIGRATION_SUCCESSFUL'] = "true"
-
-                return {
-                    "success": True,
-                    "messages": None
-                }
-
-            self.fastapi.add_api_route("/{current_user}/{user_data}/{main_key}", receive_user_data, methods=["POST"])
+    # class FastAPIMigrationApp:
+    #     def __init__(self, server_host: str = "0.0.0.0", server_port: int = 9001):
+    #         self.fastapi = FastAPI()
+    #         uvicorn.run(self.fastapi, host=server_host, port=server_port)
+    #
+    #         @self.fastapi.post("/")
+    #         def receive_user_data(current_user: str, user_data: str, main_key: str):
+    #             user_data = json.loads(user_data)
+    #
+    #             env_data = json_repair.from_file(os.path.join(toga.App().paths.data, ".env"))
+    #             env_data["MAIN_KEY"] = main_key
+    #
+    #             with open(os.path.join(toga.App().paths.data, current_user, ".passwords.json"), mode="w") as passwords_file:
+    #                 json.dump(user_data, passwords_file)
+    #
+    #
+    #             with open(os.path.join(toga.App().paths.data, ".env"), mode="w") as env_file:
+    #                 json.dump(env_data, env_file)
+    #
+    #             os.environ['MIGRATION_SUCCESSFUL'] = "true"
+    #
+    #             return {
+    #                 "success": True,
+    #                 "messages": None
+    #             }
+    #
+    #         self.fastapi.add_api_route("/{current_user}/{user_data}/{main_key}", receive_user_data, methods=["POST"])
 
 class PyPass(toga.App):
     # --------------------- App related functions ---------------------#
@@ -2978,8 +2976,6 @@ class PyPass(toga.App):
 
             self.return_to_home_screen()
 
-            await self.migrate_data(_=None)
-
             return None
 
         else:
@@ -3407,10 +3403,18 @@ class PyPass(toga.App):
             main_key = os.environ.get("MAIN_KEY")
             user_data = json.dumps(self.load_user_passwords())
 
-            result = httpx.post(f"http://{self.to_device_address_input.value}:{self.to_device_port_input.value}/{user}/{user_data}/{main_key}")
+            result = httpx.post(f"http://{self.to_device_address_input.value}:{self.to_device_port_input.value}/{user}/{user_data}/{main_key}/{str(self.paths.data).replace('/', '-')}")
             result.raise_for_status()
 
             print(result.status_code)
+
+            dialog = toga.InfoDialog(
+                title=self.success_title,
+                message="Successfully sent data to receiving device"
+            )
+
+            await self.dialog(dialog)
+            return self.return_to_home_screen()
         
         dialog = toga.QuestionDialog(
             title=self.confirm_title,
@@ -3467,7 +3471,8 @@ class PyPass(toga.App):
             dialog_result = await self.dialog(dialog)
     
             if dialog_result:
-                FastAPIMigrationApp()
+                from .migration_server import MigrationServer
+                MigrationServer()
     
                 while os.environ.get("MIGRATION_SUCCESSFUL") is None:
                     await asyncio.sleep(10)
