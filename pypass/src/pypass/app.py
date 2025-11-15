@@ -101,7 +101,6 @@ class PyPass(toga.App):
         We then create a main window (with a name matching the app), and
         show the main window.
         """
-        main_box = toga.Box()
 
         main_box = toga.Box(
             style=Pack(

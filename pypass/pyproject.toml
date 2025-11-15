@@ -24,7 +24,7 @@ test_sources = [
     "tests",
 ]
 
-requires = ["json_repair", "cryptography", "uvicorn", "fastapi"
+requires = ["json_repair", "cryptography", "uvicorn", "fastapi", "httpx"
 ]
 test_requires = [
     "pytest",
@@ -184,7 +184,8 @@ requires = [
 [tool.briefcase.app.pypass.android]
 requires = [
     "toga-android~=0.5.0",
-    "git+https://bitbucket.org/TomArn/tatogalib.git@version_2025-02-26"
+    "git+https://bitbucket.org/TomArn/tatogalib.git@version_2025-02-26",
+    "pydantic<2"
 ]
 
 base_theme = "Theme.MaterialComponents.Light.DarkActionBar"
