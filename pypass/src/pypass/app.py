@@ -1,7 +1,6 @@
 """
 A Password Manager Written in Python
 """
-import httpx
 # Data Structure
 
 # /
@@ -31,6 +30,8 @@ import httpx
 # TODO: Finish the password syncing method, add a way for the user to decide to upload passwords,
 #  download passwords, or recursively upload or download. Integrate password requests on server
 
+# TODO: Use psutil instead of socket to get IP address
+
 # Window related imports
 import toga
 from toga.style import Pack
@@ -49,7 +50,9 @@ from cryptography import fernet
 from cryptography.fernet import Fernet
 
 # Data migration imports
+import httpx
 import socket
+import psutil
 
 from pprint import pprint as print
 
@@ -58,35 +61,6 @@ if toga.platform.current_platform.lower() == "android" or "window" in toga.platf
 
 else:
     import pyperclip
-
-
-    # class FastAPIMigrationApp:
-    #     def __init__(self, server_host: str = "0.0.0.0", server_port: int = 9001):
-    #         self.fastapi = FastAPI()
-    #         uvicorn.run(self.fastapi, host=server_host, port=server_port)
-    #
-    #         @self.fastapi.post("/")
-    #         def receive_user_data(current_user: str, user_data: str, main_key: str):
-    #             user_data = json.loads(user_data)
-    #
-    #             env_data = json_repair.from_file(os.path.join(toga.App().paths.data, ".env"))
-    #             env_data["MAIN_KEY"] = main_key
-    #
-    #             with open(os.path.join(toga.App().paths.data, current_user, ".passwords.json"), mode="w") as passwords_file:
-    #                 json.dump(user_data, passwords_file)
-    #
-    #
-    #             with open(os.path.join(toga.App().paths.data, ".env"), mode="w") as env_file:
-    #                 json.dump(env_data, env_file)
-    #
-    #             os.environ['MIGRATION_SUCCESSFUL'] = "true"
-    #
-    #             return {
-    #                 "success": True,
-    #                 "messages": None
-    #             }
-    #
-    #         self.fastapi.add_api_route("/{current_user}/{user_data}/{main_key}", receive_user_data, methods=["POST"])
 
 class PyPass(toga.App):
     # --------------------- App related functions ---------------------#
@@ -2461,8 +2435,13 @@ class PyPass(toga.App):
         }
 
         server_group = toga.Group(
-            "Server Config",
+            text="Server Config",
             order=0
+        )
+
+        password_group = toga.Group(
+            text="Password Management",
+            order=1
         )
 
         add_new_server_command = toga.Command(
@@ -2505,6 +2484,18 @@ class PyPass(toga.App):
             text="Delete Server",
             group=server_group,
             order=6
+        )
+
+        migrate_passwords_command = toga.Command(
+            action=self.migrate_data,
+            group=password_group,
+            text="Migrate data",
+            order=0
+        )
+
+        self.selection_style = Pack(
+            margin_top=10,
+            margin_bottom=10
         )
 
         self.label_style = Pack(
@@ -2587,6 +2578,7 @@ class PyPass(toga.App):
         self.commands.add(add_new_server_command)
         self.commands.add(upload_passwords_command)
         self.commands.add(download_passwords_command)
+        self.commands.add(migrate_passwords_command)
 
         self.paths.data.mkdir(parents=True, exist_ok=True)
         self.paths.logs.mkdir(parents=True, exist_ok=True)
@@ -2787,19 +2779,23 @@ class PyPass(toga.App):
             )
 
     def load_env(self):
-        if not os.path.exists(os.path.join(self.paths.data, ".env")):
-            return None
+            if not os.path.exists(os.path.join(self.paths.data, ".env")):
+                return None
 
-        with open(os.path.join(self.paths.data, ".env"), mode="r") as env_file:
-            env_data = json_repair.load(env_file)
+            with open(os.path.join(self.paths.data, ".env"), mode="r") as env_file:
+                env_data = json_repair.load(env_file)
 
-        for key in env_data.keys():
-            os.environ[key] = env_data[key]
+            for key in env_data.keys():
+                os.environ[key] = env_data[key]
 
     async def get_main_fernet_object(self) -> Fernet or None:
         main_key = os.environ.get("MAIN_KEY")
+        first_run = os.environ.get("FIRST_RUN")
 
-        if main_key is None:
+        if first_run is None:
+            first_run = "true"
+
+        if main_key is None and first_run == "false":
             dialog = toga.QuestionDialog(
                 title=self.confirm_title,
                 message="No main key was found. Do you want to generate a new one? GENERATING A NEW MAIN KEY WILL "
@@ -2808,31 +2804,33 @@ class PyPass(toga.App):
 
             dialog_result = await self.dialog(dialog)
 
-            if dialog_result is True:
-                main_key = Fernet.generate_key()
-                os.environ["MAIN_KEY"] = main_key.decode()
+        if first_run == "true" or (main_key is None and dialog_result is True):
 
-                with open(os.path.join(self.paths.data, ".env"), mode="a") as env_file:
-                    json.dump(
-                        {
-                            "MAIN_KEY": main_key.decode()
-                        },
-                        env_file,
-                        indent=4
+            main_key = Fernet.generate_key()
+            os.environ["MAIN_KEY"] = main_key.decode()
+
+            with open(os.path.join(self.paths.data, ".env"), mode="w") as env_file:
+                json.dump(
+                    {
+                        "MAIN_KEY": main_key.decode(),
+                        "FIRST_RUN": "false"
+                    },
+                    env_file,
+                    indent=4
+                )
+
+            for user_folder in os.listdir(self.paths.data):
+                if os.path.isdir(user_folder):
+                    user_path = os.path.join(self.paths.data, user_folder)
+
+                    os.unlink(
+                        os.path.join(
+                            user_path,
+                            ".passwords.json"
+                        )
                     )
 
-                for user_folder in os.listdir(self.paths.data):
-                    if os.path.isdir(user_folder):
-                        user_path = os.path.join(self.paths.data, user_folder)
-
-                        os.unlink(
-                            os.path.join(
-                                user_path,
-                                ".passwords.json"
-                            )
-                        )
-
-                        os.rmdir(user_path)
+                    os.rmdir(user_path)
 
         print(main_key)
 
@@ -3396,20 +3394,52 @@ class PyPass(toga.App):
             clear_screen=True
         )
 
-    async def migrate_data(self, _=None, send_data=False):
+    async def migrate_data(self, _=None, send_data=False, set_up_server=False):
         if send_data:
             user = self.logged_in_user
             main_key = os.environ.get("MAIN_KEY")
             user_data = json.dumps(self.load_user_passwords())
 
-            result = httpx.post(f"http://{self.to_device_address_input.value}:{self.to_device_port_input.value}/{user}/{user_data}/{main_key}/{str(self.paths.data).replace('/', '-')}")
-            result.raise_for_status()
-
-            print(result.status_code)
+            httpx.post(f"http://{self.to_device_address_input.value}:{self.to_device_port_input.value}/{user}/{user_data}/{main_key}")
+            httpx.post(f"http://{self.to_device_address_input.value}:{self.to_device_port_input.value}/shutdown")
 
             dialog = toga.InfoDialog(
                 title=self.success_title,
                 message="Successfully sent data to receiving device"
+            )
+
+            await self.dialog(dialog)
+            return self.return_to_home_screen()
+
+        if set_up_server:
+            from .migration_server import MigrationServer
+
+            print(send_data)
+
+            server = MigrationServer.set_up_server(
+                event_loop=self.loop,
+                port=self.server_port_entry.value
+            )
+
+            self.server_task = asyncio.create_task(server.serve())
+
+            dialog = toga.InfoDialog(
+                title=self.success_title,
+                message=f"Server has been successfully started. Server connection details: \n\nAvailable Addresses: {[psutil.net_if_addrs()[interface][0].address for interface in psutil.net_if_addrs().keys() if psutil.net_if_addrs()[interface][0].address != "127.0.0.1"]} \nPort listening on: {self.server_port_entry.value}"
+            )
+            print("Showing dialog")
+
+            await self.dialog(dialog)
+
+            print("Waiting for migration to complete")
+
+            while os.environ.get("MIGRATION_SUCCESSFUL") is None:
+                await asyncio.to_thread(self.load_env)
+                await asyncio.sleep(10)
+
+            dialog = toga.InfoDialog(
+                title=self.success_title,
+                message="Successfully migrated data"
             )
 
             await self.dialog(dialog)
@@ -3449,8 +3479,7 @@ class PyPass(toga.App):
 
             print("Adding widgets to screen")
 
-            await asyncio.to_thread(
-                self.add_to_screen,
+            self.add_to_screen(
                 widgets=[
                     to_device_address_label,
                     self.to_device_address_input,
@@ -3470,28 +3499,59 @@ class PyPass(toga.App):
             dialog_result = await self.dialog(dialog)
     
             if dialog_result:
-                from .migration_server import MigrationServer
-                MigrationServer()
-    
-                while os.environ.get("MIGRATION_SUCCESSFUL") is None:
-                    await asyncio.sleep(10)
-    
-                dialog = toga.InfoDialog(
-                    title=self.success_title,
-                    message="Successfully migrated data"
-                )
-    
-                await self.dialog(dialog)
-    
+                if set_up_server is False:
+                    all_nic_data = psutil.net_if_addrs()
+                    available_address = []
+
+                    for nic_name in all_nic_data:
+                        nic_data = all_nic_data[nic_name]
+
+                        if nic_data[0].broadcast is not None:
+                            available_address.append(nic_data[0].address)
+
+                    select_address_label = toga.Label(
+                        text="Please select an address below, or just leave it at the default",
+                        style=self.label_style
+                    )
+
+                    self.server_address_selection = toga.Selection(
+                        items=available_address,
+                        style=self.selection_style
+                    )
+
+                    server_port_label = toga.Label(
+                        text="Please enter a server port below, or leave it at the default",
+                        style=self.label_style
+                    )
+
+                    self.server_port_entry = toga.TextInput(
+                        value="9001",
+                        style=self.input_style
+                    )
+
+                    start_server_button = toga.Button(
+                        text="Start Server",
+                        on_press=partial(self.migrate_data, set_up_server=True)
+                    )
+
+                    return self.add_to_screen(
+                        widgets=[
+                            select_address_label,
+                            self.server_address_selection,
+                            server_port_label,
+                            self.server_port_entry,
+                            start_server_button
+                        ],
+                        clear_screen=True
+                    )
+
             else:
                 dialog = toga.InfoDialog(
                     title=self.success_title,
                     message="Data migration has been cancelled"
                 )
-    
-                await self.dialog(dialog)
 
-        # return self.return_to_home_screen()
+                return await self.dialog(dialog)
 
     def load_user_passwords(self, check_data_integrity=True) -> dict:
         username = self.user_entry.value
