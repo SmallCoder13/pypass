@@ -1,5 +1,9 @@
 <img src="pypass/icons/PyPass-round-1280.png"/>
 
+**IMPORTANT NOTE:**
+
+The latest version of PyPass changed the bundle Identifier for pypass. This means that if you are using the system executable, two apps called 'PyPass' will appear. One of them will have a bundle identifier of 'com.example.pypass', the other will have a bundle identifier of 'com.coryellcottage.pypass'. To help you tell the two apart, a new command titled 'Get App Details' has been added. You can use this new command to get the bundle identifier of PyPass, and the file path where your data is stored. To move your data from the PyPass with a bundle identifier of 'com.example.pypass' to the PyPass with a bundle identifier of 'com.coryellcottage.pypass', you can use the new data migration feature. Note that you will have to repeat the migration process for each user saved under PyPass. It is recommended that you delete the version of PyPass with a bundle identifier of 'com.example.pypass' after migrating your data to the new version of pypass, to avoid confusion
+
 This is a cross platform password manager written in python using the [beeware suite](https://beeware.org/).
 
 ***Requirements***

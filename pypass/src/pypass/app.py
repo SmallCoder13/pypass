@@ -2493,6 +2493,13 @@ class PyPass(toga.App):
             order=0
         )
 
+        get_app_details_command = toga.Command(
+            action=self.get_app_details,
+            group=password_group,
+            text="Get App Data Folder",
+            order=1
+        )
+
         self.selection_style = Pack(
             margin_top=10,
             margin_bottom=10
@@ -2579,6 +2586,7 @@ class PyPass(toga.App):
         self.commands.add(upload_passwords_command)
         self.commands.add(download_passwords_command)
         self.commands.add(migrate_passwords_command)
+        self.commands.add(get_app_details_command)
 
         self.paths.data.mkdir(parents=True, exist_ok=True)
         self.paths.logs.mkdir(parents=True, exist_ok=True)
@@ -2642,7 +2650,7 @@ class PyPass(toga.App):
             await self.dialog(dialog)
             return self.return_to_home_screen(logged_in=False)
 
-    def return_to_home_screen(self, logged_in=True):
+    def return_to_home_screen(self, _=None, logged_in=True):
         if logged_in:
             service_label = toga.Label(
                 text="Service: ",
@@ -2836,6 +2844,32 @@ class PyPass(toga.App):
 
         main_fernet = Fernet(main_key)
         return main_fernet
+
+    def get_app_details(self, _):
+        data_path_label = toga.Label(
+            text=f"The data path for PyPass is: {self.paths.data} \nThe Bundle Identifier is: {self.app_id}",
+            style=self.label_style
+        )
+
+        if self.logged_in_user is None:
+            return_to_home_button = toga.Button(
+                text="Return to home screen",
+                on_press=partial(self.return_to_home_screen, logged_in=False)
+            )
+
+        else:
+            return_to_home_button = toga.Button(
+                text="Return to home screen",
+                on_press=self.return_to_home_screen
+            )
+
+        return self.add_to_screen(
+            widgets=[
+                data_path_label,
+                return_to_home_button
+            ],
+            clear_screen=True
+        )
 
 # --------------------- User related functions ---------------------#
 
@@ -3179,7 +3213,7 @@ class PyPass(toga.App):
 
         user_data = self.load_user_passwords()
 
-        await self.validate_values(
+        is_valid = await self.validate_values(
             to_validate={
                 "Service": service,
                 "Username": username,
@@ -3188,6 +3222,9 @@ class PyPass(toga.App):
             message_for_dialog="<value> cannot be empty",
             inverse_check=True
         )
+
+        if is_valid is False:
+            return None
 
         if "data" not in user_data.keys():
             dialog = toga.ErrorDialog(
@@ -3433,9 +3470,10 @@ class PyPass(toga.App):
 
             print("Waiting for migration to complete")
 
-            while os.environ.get("MIGRATION_SUCCESSFUL") is None:
-                await asyncio.to_thread(self.load_env)
+            while not hasattr(self, "migration_successful"):
                 await asyncio.sleep(10)
+
+            await asyncio.to_thread(self.load_env)
 
             dialog = toga.InfoDialog(
                 title=self.success_title,

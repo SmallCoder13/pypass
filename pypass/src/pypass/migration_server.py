@@ -20,6 +20,7 @@ class MigrationServer:
         data_path = toga.App.app.paths.data
 
         user_data = json.loads(user_data)
+        print(user_data)
 
         env_data = json_repair.from_file(os.path.join(data_path, ".env"))
         env_data["MAIN_KEY"] = main_key
@@ -30,11 +31,13 @@ class MigrationServer:
         with open(os.path.join(data_path, ".env"), mode="w") as env_file:
             json.dump(env_data, env_file)
 
-        app_env = json_repair.from_file(os.path.join(data_path, ".env"))
-        app_env["MIGRATION_SUCCESSFUL"] = "true"
+        toga.App.app.migration_successful = True
 
-        with open(os.path.join(data_path, ".env"), mode="w") as env_file:
-            json.dump(app_env, env_file)
+        # app_env = json_repair.from_file(os.path.join(data_path, ".env"))
+        # app_env["MIGRATION_SUCCESSFUL"] = "true"
+        #
+        # with open(os.path.join(data_path, ".env"), mode="w") as env_file:
+        #     json.dump(app_env, env_file)
 
         return {
             "success": True,

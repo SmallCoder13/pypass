@@ -5,7 +5,7 @@ PyPass
 `The BeeWare Project`_. **If you want to see more tools like Briefcase, please
 consider** `becoming a financial member of BeeWare`_.
 
-A Password Manager Written in Python
+A Cross-Platform password manager written in python
 
 .. _`Briefcase`: https://briefcase.readthedocs.io/
 .. _`The BeeWare Project`: https://beeware.org/

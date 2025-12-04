@@ -1,22 +1,18 @@
 # This project was generated with 0.3.25 using template: https://github.com/beeware/briefcase-template @ v0.3.25
 [tool.briefcase]
 project_name = "PyPass"
-bundle = "com.example"
+bundle = "com.coryellcottage"
 version = "0.0.1"
-url = "https://example.com/pypass"
+url = "https://coryellcottage.com/pypass"
 license.file = "LICENSE"
 author = "Spyridon Coryell"
 author_email = "SpyridonCoryell@protonmail.com"
 
 [tool.briefcase.app.pypass]
 formal_name = "PyPass"
-description = "A Password Manager Written in Python"
+description = "A Cross-Platform password manager written in python"
 long_description = """More details about the app should go here.
 """
-
-icon="icons/PyPass"
-splash_background_color = '#02ADFF'
-
 sources = [
     "src/pypass",
 ]
@@ -24,7 +20,7 @@ test_sources = [
     "tests",
 ]
 
-requires = ["json_repair", "cryptography", "uvicorn", "fastapi", "httpx"
+requires = ["json_repair", "cryptography", "uvicorn", "fastapi", "httpx", "psutil"
 ]
 test_requires = [
     "pytest",
