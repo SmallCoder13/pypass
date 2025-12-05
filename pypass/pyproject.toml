@@ -2,7 +2,7 @@
 [tool.briefcase]
 project_name = "PyPass"
 bundle = "com.coryellcottage"
-version = "0.0.2"
+version = "0.0.3"
 url = "https://coryellcottage.com/pypass"
 license.file = "LICENSE"
 author = "Spyridon Coryell"

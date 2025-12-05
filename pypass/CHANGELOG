@@ -1,5 +1,6 @@
 # PyPass Release Notes
 
-## 0.0.2 (04 Dec 2025)
+## 0.0.3 (04 Dec 2025)
 
-* Fix App Icon not being included in app
+* Merge all .gitignore files into one .gitignore
+* Add System executables for PyPass
