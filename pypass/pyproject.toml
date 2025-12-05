@@ -2,7 +2,7 @@
 [tool.briefcase]
 project_name = "PyPass"
 bundle = "com.coryellcottage"
-version = "0.0.1"
+version = "0.0.2"
 url = "https://coryellcottage.com/pypass"
 license.file = "LICENSE"
 author = "Spyridon Coryell"
@@ -13,6 +13,10 @@ formal_name = "PyPass"
 description = "A Cross-Platform password manager written in python"
 long_description = """More details about the app should go here.
 """
+
+icon = "icons/PyPass"
+splash_background_color = '#02ADFF'
+
 sources = [
     "src/pypass",
 ]

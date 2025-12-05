@@ -1,7 +1,5 @@
 # PyPass Release Notes
 
-## 0.0.1 (03 Dec 2025)
+## 0.0.2 (04 Dec 2025)
 
-* Change the Bundle Identifier of PyPass
-* Add the Data Migration feature
-* Fix a bug that allowed users to edit passwords without supplying a new password
+* Fix App Icon not being included in app
