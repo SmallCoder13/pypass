@@ -5,7 +5,10 @@ import toga
 import json
 import os
 
+PYPASS_SERVER_CODE_BRANCH = "dev-branch"
 os.environ["TOGA_BACKEND"] = "toga_dummy"
+PYPASS_SERVER_CODE_FOLDER = "pypass-server"
+PYPASS_SERVER_CODE_PATH = "coryellcottage/pypass"
 
 def test_recover_key():
     print("Testing recover_key...")
@@ -126,4 +129,33 @@ def test_copy_to_clipboard():
     assert copy_to_clipboard("Test text") == "Successfully copied to clipboard"
 
 def test_server():
-    from ..pypass_server.main import get_connection_data
+    import requests
+
+    response = requests.get(f"https://api.github.com/repos/{PYPASS_SERVER_CODE_PATH}/contents/{PYPASS_SERVER_CODE_FOLDER}?ref={PYPASS_SERVER_CODE_BRANCH}", headers={"Authorization": f"Bearer {os.environ.get('GITHUB_API_TOKEN')}"})
+    response.raise_for_status()
+
+    api_data = response.json()
+
+    for file in api_data:
+        response = requests.get(file["download_url"])
+        response.raise_for_status()
+
+        file_text = response.text
+        file_path = file["path"].split("/")
+        del file_path[-1]
+
+        try:
+            for folder in file_path:
+                os.mkdir(folder)
+
+        except FileExistsError:
+            pass
+
+        with open(file["path"], mode="w") as new_file:
+            new_file.write(file_text)
+
+    assert os.path.exists("pypass-server") and os.path.exists("pypass-server/main.py") and os.path.exists("pypass-server/requirements.txt")
+
+    os.unlink(os.path.join("pypass-server", "requirements.txt"))
+    os.unlink(os.path.join("pypass-server", "main.py"))
+    os.rmdir("pypass-server")
