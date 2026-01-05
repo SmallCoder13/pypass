@@ -2,7 +2,7 @@
 [tool.briefcase]
 project_name = "PyPass"
 bundle = "com.coryellcottage"
-version = "0.0.3"
+version = "1.0.0"
 url = "https://coryellcottage.com/pypass"
 license.file = "LICENSE"
 author = "Spyridon Coryell"
@@ -11,7 +11,25 @@ author_email = "SpyridonCoryell@protonmail.com"
 [tool.briefcase.app.pypass]
 formal_name = "PyPass"
 description = "A Cross-Platform password manager written in python"
-long_description = """More details about the app should go here.
+long_description = """PyPass is a open source, cross platform password manager.
+
+**Supported Platforms**
+PyPass is current supported on the following platforms:
+
+	Linux (Debian, Arch and RHEL)
+	Windows
+	Mac
+	Android
+
+**Donations**
+To donate to PyPass use these links:
+	Buy Me A Coffee: buymeacoffee.com/pypass
+
+**Source Code**
+The source code for pypass and be found here:
+	https://github.com/coryellcottage/pypass
+
+You can contribute to pypass there, report issues with pypass, request features, or just give feedback
 """
 
 icon = "icons/PyPass"

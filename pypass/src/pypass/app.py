@@ -25,25 +25,18 @@ A Password Manager Written in Python
 #   }
 # }
 
-# TODO: Add way to determine whether or not device is sending data, or receiving data for data migration
-
 # TODO: Finish the password syncing method, add a way for the user to decide to upload passwords,
 #  download passwords, or recursively upload or download. Integrate password requests on server
 
-# TODO: Use psutil instead of socket to get IP address
-
 # Window related imports
-import toga
 from toga.style import Pack
 
 # App related imports
-import json
-import random
 import os.path
 import asyncio
 import secrets
 import textwrap
-import json_repair
+from .utils import *
 import cryptography.fernet
 from functools import partial
 from cryptography import fernet
@@ -65,7 +58,7 @@ else:
 class PyPass(toga.App):
     # --------------------- App related functions ---------------------#
     async def on_running(self):
-        self.load_env()
+        load_env(env_path=os.path.join(self.paths.data, ".env"), env_object=os.environ)
         self.main_fernet: Fernet = await self.get_main_fernet_object()
 
     def startup(self):
@@ -93,2345 +86,32 @@ class PyPass(toga.App):
         self.server = None
 
         self.backup_words = {
-            "A": [
-                "a",
-                "ability",
-                "able",
-                "about",
-                "above",
-                "abroad",
-                "absence",
-                "absent",
-                "absolute",
-                "accept",
-                "accident",
-                "accord",
-                "account",
-                "accuse",
-                "accustom",
-                "ache",
-                "across",
-                "act",
-                "action",
-                "active",
-                "actor",
-                "actress",
-                "actual",
-                "add",
-                "address",
-                "admire",
-                "admission",
-                "admit",
-                "adopt",
-                "adoption",
-                "advance",
-                "advantage",
-                "adventure",
-                "advertise",
-                "advice",
-                "advise",
-                "affair",
-                "afford",
-                "afraid",
-                "after",
-                "afternoon",
-                "again",
-                "against",
-                "age",
-                "agency",
-                "agent",
-                "ago",
-                "agree",
-                "agriculture",
-                "ahead",
-                "aim",
-                "air",
-                "airplane",
-                "alike",
-                "alive",
-                "all",
-                "allow",
-                "allowance",
-                "almost",
-                "alone",
-                "along",
-                "aloud",
-                "already",
-                "also",
-                "although",
-                "altogether",
-                "always",
-                "ambition",
-                "ambitious",
-                "among",
-                "amongst",
-                "amount",
-                "amuse",
-                "ancient",
-                "and",
-                "anger",
-                "angle",
-                "angry",
-                "animal",
-                "annoy",
-                "annoyance",
-                "another",
-                "answer",
-                "anxiety",
-                "anxious",
-                "any",
-                "anybody",
-                "anyhow",
-                "anyone",
-                "anything",
-                "anyway",
-                "anywhere",
-                "apart",
-                "apology",
-                "appear",
-                "appearance",
-                "applaud",
-                "applause",
-                "apple",
-                "application",
-                "apply",
-                "appoint",
-                "approve",
-                "arch",
-                "argue",
-                "arise",
-                "arm",
-                "army",
-                "around",
-                "arrange",
-                "arrest",
-                "arrive",
-                "arrow",
-                "art",
-                "article",
-                "artificial",
-                "as",
-                "ash",
-                "ashamed",
-                "aside",
-                "ask",
-                "asleep",
-                "association",
-                "astonish",
-                "at",
-                "attack",
-                "attempt",
-                "attend",
-                "attention",
-                "attentive",
-                "attract",
-                "attraction",
-                "attractive",
-                "audience",
-                "aunt",
-                "autumn",
-                "avenue",
-                "average",
-                "avoid",
-                "avoidance",
-                "awake",
-                "away",
-                "awkward",
-                "axe"
-            ],
-            "B": [
-                "baby",
-                "back",
-                "backward",
-                "bad",
-                "bag",
-                "baggage",
-                "bake",
-                "balance",
-                "ball",
-                "band",
-                "bank",
-                "bar",
-                "barber",
-                "bare",
-                "bargain",
-                "barrel",
-                "base",
-                "basic",
-                "basin",
-                "basis",
-                "basket",
-                "bath",
-                "bathe",
-                "battery",
-                "battle",
-                "bay",
-                "be",
-                "beak",
-                "beam",
-                "bean",
-                "bear",
-                "beard",
-                "beast",
-                "beat",
-                "beauty",
-                "because",
-                "become",
-                "bed",
-                "bedroom",
-                "before",
-                "beg",
-                "begin",
-                "behave",
-                "behavior",
-                "behind",
-                "being",
-                "belief",
-                "believe",
-                "bell",
-                "belong",
-                "below",
-                "belt",
-                "bend",
-                "beneath",
-                "berry",
-                "beside",
-                "besides",
-                "best",
-                "better",
-                "between",
-                "beyond",
-                "bicycle",
-                "big",
-                "bill",
-                "bind",
-                "bird",
-                "birth",
-                "bit",
-                "bite",
-                "bitter",
-                "black",
-                "blade",
-                "blame",
-                "bleed",
-                "bless",
-                "blind",
-                "block",
-                "blood",
-                "blow",
-                "blue",
-                "board",
-                "boast",
-                "boat",
-                "body",
-                "boil",
-                "bold",
-                "bone",
-                "book",
-                "border",
-                "borrow",
-                "both",
-                "bottle",
-                "bottom",
-                "bound",
-                "boundary",
-                "bow",
-                "bowl",
-                "box",
-                "boy",
-                "brain",
-                "branch",
-                "brass",
-                "brave",
-                "bravery",
-                "bread",
-                "breadth",
-                "break",
-                "breakfast",
-                "breath",
-                "breathe",
-                "bribe",
-                "bribery",
-                "brick",
-                "bridge",
-                "bright",
-                "brighten",
-                "bring",
-                "broad",
-                "broadcast",
-                "brother",
-                "brown",
-                "brush",
-                "bucket",
-                "build",
-                "bunch",
-                "bundle",
-                "burn",
-                "burst",
-                "bury",
-                "bus",
-                "bush",
-                "business",
-                "businesslike",
-                "businessman",
-                "busy",
-                "but",
-                "butter",
-                "button",
-                "buy",
-                "by"
-            ],
-            "C": [
-                "cage",
-                "cake",
-                "calculate",
-                "calculation",
-                "calculator",
-                "call",
-                "calm",
-                "camera",
-                "camp",
-                "can",
-                "canal",
-                "cap",
-                "cape",
-                "capital",
-                "captain",
-                "car",
-                "card",
-                "care",
-                "carriage",
-                "carry",
-                "cart",
-                "case",
-                "castle",
-                "cat",
-                "catch",
-                "cattle",
-                "cause",
-                "caution",
-                "cautious",
-                "cave",
-                "cent",
-                "center",
-                "century",
-                "ceremony",
-                "certain",
-                "certainty",
-                "chain",
-                "chair",
-                "chairman",
-                "chalk",
-                "chance",
-                "change",
-                "character",
-                "charge",
-                "charm",
-                "cheap",
-                "cheat",
-                "check",
-                "cheer",
-                "cheese",
-                "chest",
-                "chicken",
-                "chief",
-                "child",
-                "childhood",
-                "chimney",
-                "choice",
-                "choose",
-                "christmas",
-                "church",
-                "circle",
-                "circular",
-                "citizen",
-                "city",
-                "civilize",
-                "claim",
-                "class",
-                "classification",
-                "classify",
-                "clay",
-                "clean",
-                "clear",
-                "clerk",
-                "clever",
-                "cliff",
-                "climb",
-                "clock",
-                "close",
-                "cloth",
-                "clothe",
-                "cloud",
-                "club",
-                "coal",
-                "coarse",
-                "coast",
-                "coat",
-                "coffee",
-                "coin",
-                "cold",
-                "collar",
-                "collect",
-                "collection",
-                "collector",
-                "college",
-                "colony",
-                "color",
-                "comb",
-                "combine",
-                "come",
-                "comfort",
-                "command",
-                "commerce",
-                "commercial",
-                "committee",
-                "common",
-                "companion",
-                "companionship",
-                "company",
-                "compare",
-                "comparison",
-                "compete",
-                "competition",
-                "competitor",
-                "complain",
-                "complaint",
-                "complete",
-                "completion",
-                "complicate",
-                "complication",
-                "compose",
-                "composition",
-                "concern",
-                "condition",
-                "confess",
-                "confession",
-                "confidence",
-                "confident",
-                "confidential",
-                "confuse",
-                "confusion",
-                "congratulate",
-                "congratulation",
-                "connect",
-                "connection",
-                "conquer",
-                "conqueror",
-                "conquest",
-                "conscience",
-                "conscious",
-                "consider",
-                "contain",
-                "content",
-                "continue",
-                "control",
-                "convenience",
-                "convenient",
-                "conversation",
-                "cook",
-                "cool",
-                "copper",
-                "copy",
-                "cork",
-                "corn",
-                "corner",
-                "correct",
-                "correction",
-                "cost",
-                "cottage",
-                "cotton",
-                "cough",
-                "could",
-                "council",
-                "count",
-                "country",
-                "courage",
-                "course",
-                "court",
-                "cousin",
-                "cover",
-                "cow",
-                "coward",
-                "cowardice",
-                "crack",
-                "crash",
-                "cream",
-                "creature",
-                "creep",
-                "crime",
-                "criminal",
-                "critic",
-                "crop",
-                "cross",
-                "crowd",
-                "crown",
-                "cruel",
-                "crush",
-                "cry",
-                "cultivate",
-                "cultivation",
-                "cultivator",
-                "cup",
-                "cupboard",
-                "cure",
-                "curious",
-                "curl",
-                "current",
-                "curse",
-                "curtain",
-                "curve",
-                "cushion",
-                "custom",
-                "customary",
-                "customer",
-                "cut"
-            ],
-            "D": [
-                "daily",
-                "damage",
-                "damp",
-                "dance",
-                "danger",
-                "dare",
-                "dark",
-                "darken",
-                "date",
-                "daughter",
-                "day",
-                "daylight",
-                "dead",
-                "deaf",
-                "deafen",
-                "deal",
-                "dear",
-                "death",
-                "debt",
-                "decay",
-                "deceit",
-                "deceive",
-                "decide",
-                "decision",
-                "decisive",
-                "declare",
-                "decrease",
-                "deed",
-                "deep",
-                "deepen",
-                "deer",
-                "defeat",
-                "defend",
-                "defendant",
-                "defense",
-                "degree",
-                "delay",
-                "delicate",
-                "delight",
-                "deliver",
-                "delivery",
-                "demand",
-                "department",
-                "depend",
-                "dependence",
-                "dependent",
-                "depth",
-                "descend",
-                "descendant",
-                "descent",
-                "describe",
-                "description",
-                "desert",
-                "deserve",
-                "desire",
-                "desk",
-                "despair",
-                "destroy",
-                "destruction",
-                "destructive",
-                "detail",
-                "determine",
-                "develop",
-                "devil",
-                "diamond",
-                "dictionary",
-                "die",
-                "difference",
-                "different",
-                "difficult",
-                "difficulty",
-                "dig",
-                "dine",
-                "dinner",
-                "dip",
-                "direct",
-                "direction",
-                "director",
-                "dirt",
-                "disagree",
-                "disappear",
-                "disappearance",
-                "disappoint",
-                "disapprove",
-                "discipline",
-                "discomfort",
-                "discontent",
-                "discover",
-                "discovery",
-                "discuss",
-                "discussion",
-                "disease",
-                "disgust",
-                "dish",
-                "dismiss",
-                "disregard",
-                "disrespect",
-                "dissatisfaction",
-                "dissatisfy",
-                "distance",
-                "distant",
-                "distinguish",
-                "district",
-                "disturb",
-                "ditch",
-                "dive",
-                "divide",
-                "division",
-                "do",
-                "doctor",
-                "dog",
-                "dollar",
-                "donkey",
-                "door",
-                "dot",
-                "double",
-                "doubt",
-                "down",
-                "dozen",
-                "drag",
-                "draw",
-                "drawer",
-                "dream",
-                "dress",
-                "drink",
-                "drive",
-                "drop",
-                "drown",
-                "drum",
-                "dry",
-                "duck",
-                "due",
-                "dull",
-                "during",
-                "dust",
-                "duty"
-            ],
-            "E": [
-                "each",
-                "eager",
-                "ear",
-                "early",
-                "earn",
-                "earnest",
-                "earth",
-                "ease",
-                "east",
-                "eastern",
-                "easy",
-                "eat",
-                "edge",
-                "educate",
-                "education",
-                "educator",
-                "effect",
-                "effective",
-                "efficiency",
-                "efficient",
-                "effort",
-                "egg",
-                "either",
-                "elastic",
-                "elder",
-                "elect",
-                "election",
-                "electric",
-                "electrician",
-                "elephant",
-                "else",
-                "elsewhere",
-                "empire",
-                "employ",
-                "employee",
-                "empty",
-                "enclose",
-                "enclosure",
-                "encourage",
-                "end",
-                "enemy",
-                "engine",
-                "engineer",
-                "english",
-                "enjoy",
-                "enough",
-                "enter",
-                "entertain",
-                "entire",
-                "entrance",
-                "envelope",
-                "envy",
-                "equal",
-                "escape",
-                "especially",
-                "essence",
-                "essential",
-                "even",
-                "evening",
-                "event",
-                "ever",
-                "everlasting",
-                "every",
-                "everybody",
-                "everyday",
-                "everyone",
-                "everything",
-                "everywhere",
-                "evil",
-                "exact",
-                "examine",
-                "example",
-                "excellence",
-                "excellent",
-                "except",
-                "exception",
-                "excess",
-                "excessive",
-                "exchange",
-                "excite",
-                "excuse",
-                "exercise",
-                "exist",
-                "existence",
-                "expect",
-                "expense",
-                "expensive",
-                "experience",
-                "experiment",
-                "explain",
-                "explode",
-                "explore",
-                "explosion",
-                "explosive",
-                "express",
-                "expression",
-                "extend",
-                "extension",
-                "extensive",
-                "extent",
-                "extra",
-                "extraordinary",
-                "extreme",
-                "eye"
-            ],
-            "F": [
-                "face",
-                "fact",
-                "factory",
-                "fade",
-                "fail",
-                "failure",
-                "faint",
-                "fair",
-                "faith",
-                "fall",
-                "FALSE",
-                "fame",
-                "familiar",
-                "family",
-                "fan",
-                "fancy",
-                "far",
-                "farm",
-                "fashion",
-                "fast",
-                "fasten",
-                "fat",
-                "fate",
-                "father",
-                "fatten",
-                "fault",
-                "favor",
-                "favorite",
-                "fear",
-                "feast",
-                "feather",
-                "feed",
-                "feel",
-                "fellow",
-                "fellowship",
-                "female",
-                "fence",
-                "fever",
-                "few",
-                "field",
-                "fierce",
-                "fight",
-                "figure",
-                "fill",
-                "film",
-                "find",
-                "fine",
-                "finger",
-                "finish",
-                "fire",
-                "firm",
-                "first",
-                "fish",
-                "fit",
-                "fix",
-                "flag",
-                "flame",
-                "flash",
-                "flat",
-                "flatten",
-                "flavor",
-                "flesh",
-                "float",
-                "flood",
-                "floor",
-                "flour",
-                "flow",
-                "flower",
-                "fly",
-                "fold",
-                "follow",
-                "fond",
-                "food",
-                "fool",
-                "foot",
-                "for",
-                "forbid",
-                "force",
-                "foreign",
-                "forest",
-                "forget",
-                "forgive",
-                "fork",
-                "form",
-                "formal",
-                "former",
-                "forth",
-                "fortunate",
-                "fortune",
-                "forward",
-                "frame",
-                "framework",
-                "free",
-                "freedom",
-                "freeze",
-                "frequency",
-                "frequent",
-                "fresh",
-                "friend",
-                "friendly",
-                "friendship",
-                "fright",
-                "frighten",
-                "from",
-                "front",
-                "fruit",
-                "fry",
-                "full",
-                "fun",
-                "funeral",
-                "funny",
-                "fur",
-                "furnish",
-                "furniture",
-                "further",
-                "future"
-            ],
-            "G": [
-                "gaiety",
-                "gain",
-                "gallon",
-                "game",
-                "gap",
-                "garage",
-                "garden",
-                "gas",
-                "gate",
-                "gather",
-                "gay",
-                "general",
-                "generous",
-                "gentle",
-                "gentleman",
-                "get",
-                "gift",
-                "girl",
-                "give",
-                "glad",
-                "glass",
-                "glory",
-                "go",
-                "goat",
-                "god",
-                "gold",
-                "golden",
-                "good",
-                "govern",
-                "governor",
-                "grace",
-                "gradual",
-                "grain",
-                "grammar",
-                "grammatical",
-                "grand",
-                "grass",
-                "grateful",
-                "grave",
-                "gray",
-                "grease",
-                "great",
-                "greed",
-                "green",
-                "greet",
-                "grind",
-                "ground",
-                "group",
-                "grow",
-                "growth",
-                "guard",
-                "guess",
-                "guest",
-                "guide",
-                "guilt",
-                "gun"
-            ],
-            "H": [
-                "habit",
-                "hair",
-                "half",
-                "hall",
-                "hammer",
-                "hand",
-                "handkerchief",
-                "handle",
-                "handshake",
-                "handwriting",
-                "hang",
-                "happen",
-                "happy",
-                "harbor",
-                "hard",
-                "harden",
-                "hardly",
-                "harm",
-                "harvest",
-                "haste",
-                "hasten",
-                "hat",
-                "hate",
-                "hatred",
-                "have",
-                "hay",
-                "he",
-                "head",
-                "headache",
-                "headdress",
-                "heal",
-                "health",
-                "heap",
-                "hear",
-                "heart",
-                "heat",
-                "heaven",
-                "heavenly",
-                "heavy",
-                "height",
-                "heighten",
-                "hello",
-                "help",
-                "here",
-                "hesitate",
-                "hesitation",
-                "hide",
-                "high",
-                "highway",
-                "hill",
-                "hinder",
-                "hindrance",
-                "hire",
-                "history",
-                "hit",
-                "hold",
-                "hole",
-                "holiday",
-                "hollow",
-                "holy",
-                "home",
-                "homecoming",
-                "homemade",
-                "homework",
-                "honest",
-                "honesty",
-                "honor",
-                "hook",
-                "hope",
-                "horizon",
-                "horizontal",
-                "horse",
-                "hospital",
-                "host",
-                "hot",
-                "hotel",
-                "hour",
-                "house",
-                "how",
-                "however",
-                "human",
-                "humble",
-                "hunger",
-                "hunt",
-                "hurrah",
-                "hurry",
-                "hurt",
-                "husband",
-                "hut"
-            ],
-            "I": [
-                "I",
-                "ice",
-                "idea",
-                "ideal",
-                "idle",
-                "if",
-                "ill",
-                "imaginary",
-                "imaginative",
-                "imagine",
-                "imitate",
-                "imitation",
-                "immediate",
-                "immense",
-                "importance",
-                "important",
-                "impossible",
-                "improve",
-                "in",
-                "inch",
-                "include",
-                "inclusive",
-                "increase",
-                "indeed",
-                "indoor",
-                "industry",
-                "influence",
-                "influential",
-                "inform",
-                "ink",
-                "inn",
-                "inquire",
-                "inquiry",
-                "insect",
-                "inside",
-                "instant",
-                "instead",
-                "instrument",
-                "insult",
-                "insurance",
-                "insure",
-                "intend",
-                "intention",
-                "interest",
-                "interfere",
-                "interference",
-                "international",
-                "interrupt",
-                "interruption",
-                "into",
-                "introduce",
-                "introduction",
-                "invent",
-                "invention",
-                "inventor",
-                "invite",
-                "inward",
-                "iron",
-                "island",
-                "it"
-            ],
-            "J": [
-                "jaw",
-                "jealous",
-                "jealousy",
-                "jewel",
-                "join",
-                "joint",
-                "joke",
-                "journey",
-                "joy",
-                "judge",
-                "juice",
-                "jump",
-                "just",
-                "justice"
-            ],
-            "K": [
-                "keep",
-                "key",
-                "kick",
-                "kill",
-                "kind",
-                "king",
-                "kingdom",
-                "kiss",
-                "kitchen",
-                "knee",
-                "kneel",
-                "knife",
-                "knock",
-                "knot",
-                "know",
-                "knowledge"
-            ],
-            "L": [
-                "lack",
-                "ladder",
-                "lady",
-                "lake",
-                "lamp",
-                "land",
-                "landlord",
-                "language",
-                "large",
-                "last",
-                "late",
-                "lately",
-                "latter",
-                "laugh",
-                "laughter",
-                "law",
-                "lawyer",
-                "lay",
-                "lazy",
-                "lead",
-                "leadership",
-                "leaf",
-                "lean",
-                "learn",
-                "least",
-                "leather",
-                "leave",
-                "left",
-                "leg",
-                "lend",
-                "length",
-                "lengthen",
-                "less",
-                "lessen",
-                "lesson",
-                "let",
-                "letter",
-                "level",
-                "liar",
-                "liberty",
-                "librarian",
-                "library",
-                "lid",
-                "lie",
-                "life",
-                "lift",
-                "light",
-                "lighten",
-                "like",
-                "likely",
-                "limb",
-                "limit",
-                "line",
-                "lip",
-                "lipstick",
-                "liquid",
-                "list",
-                "listen",
-                "literary",
-                "literature",
-                "little",
-                "live",
-                "load",
-                "loaf",
-                "loan",
-                "local",
-                "lock",
-                "lodge",
-                "log",
-                "lonely",
-                "long",
-                "look",
-                "loose",
-                "loosen",
-                "lord",
-                "lose",
-                "loss",
-                "lot",
-                "loud",
-                "love",
-                "lovely",
-                "low",
-                "loyal",
-                "loyalty",
-                "luck",
-                "lump",
-                "lunch",
-                "lung"
-            ],
-            "M": [
-                "machine",
-                "machinery",
-                "mad",
-                "madden",
-                "mail",
-                "main",
-                "make",
-                "male",
-                "man",
-                "manage",
-                "mankind",
-                "manner",
-                "manufacture",
-                "many",
-                "map",
-                "march",
-                "mark",
-                "market",
-                "marriage",
-                "marry",
-                "mass",
-                "master",
-                "mat",
-                "match",
-                "material",
-                "matter",
-                "may",
-                "maybe",
-                "meal",
-                "mean",
-                "meantime",
-                "meanwhile",
-                "measure",
-                "meat",
-                "mechanic",
-                "mechanism",
-                "medical",
-                "medicine",
-                "meet",
-                "melt",
-                "member",
-                "membership",
-                "memory",
-                "mend",
-                "mention",
-                "merchant",
-                "mercy",
-                "mere",
-                "merry",
-                "message",
-                "messenger",
-                "metal",
-                "middle",
-                "might",
-                "mild",
-                "mile",
-                "milk",
-                "mill",
-                "mind",
-                "mine",
-                "mineral",
-                "minister",
-                "minute",
-                "miserable",
-                "misery",
-                "miss",
-                "mistake",
-                "mix",
-                "mixture",
-                "model",
-                "moderate",
-                "moderation",
-                "modern",
-                "modest",
-                "modesty",
-                "moment",
-                "momentary",
-                "money",
-                "monkey",
-                "month",
-                "moon",
-                "moonlight",
-                "moral",
-                "more",
-                "moreover",
-                "morning",
-                "most",
-                "mother",
-                "motherhood",
-                "motherly",
-                "motion",
-                "motor",
-                "mountain",
-                "mouse",
-                "mouth",
-                "move",
-                "much",
-                "mud",
-                "multiplication",
-                "multiply",
-                "murder",
-                "music",
-                "musician",
-                "must",
-                "mystery"
-            ],
-            "N": [
-                "nail",
-                "name",
-                "narrow",
-                "nation",
-                "native",
-                "nature",
-                "near",
-                "neat",
-                "necessary",
-                "necessity",
-                "neck",
-                "need",
-                "needle",
-                "neglect",
-                "neighbor",
-                "neighborhood",
-                "neither",
-                "nephew",
-                "nest",
-                "net",
-                "network",
-                "never",
-                "new",
-                "news",
-                "newspaper",
-                "next",
-                "nice",
-                "niece",
-                "night",
-                "no",
-                "noble",
-                "nobody",
-                "noise",
-                "none",
-                "noon",
-                "nor",
-                "north",
-                "northern",
-                "nose",
-                "not",
-                "note",
-                "notebook",
-                "nothing",
-                "notice",
-                "noun",
-                "now",
-                "nowadays",
-                "nowhere",
-                "nuisance",
-                "number",
-                "numerous",
-                "nurse",
-                "nursery",
-                "nut"
-            ],
-            "O": [
-                "oar",
-                "obedience",
-                "obedient",
-                "obey",
-                "object",
-                "objection",
-                "observe",
-                "occasion",
-                "ocean",
-                "of",
-                "off",
-                "offend",
-                "offense",
-                "offer",
-                "office",
-                "officer",
-                "official",
-                "often",
-                "oil",
-                "old",
-                "old-fashioned",
-                "omission",
-                "omit",
-                "on",
-                "once",
-                "one",
-                "only",
-                "onto",
-                "open",
-                "operate",
-                "operation",
-                "operator",
-                "opinion",
-                "opportunity",
-                "oppose",
-                "opposite",
-                "opposition",
-                "or",
-                "orange",
-                "order",
-                "ordinary",
-                "organ",
-                "organize",
-                "origin",
-                "ornament",
-                "other",
-                "otherwise",
-                "ought",
-                "ounce",
-                "out",
-                "outline",
-                "outside",
-                "outward",
-                "over",
-                "overcome",
-                "overflow",
-                "owe",
-                "own",
-                "ownership"
-            ],
-            "P": [
-                "pack",
-                "package",
-                "pad",
-                "page",
-                "pain",
-                "paint",
-                "pair",
-                "pale",
-                "pan",
-                "paper",
-                "parcel",
-                "pardon",
-                "parent",
-                "park",
-                "part",
-                "particle",
-                "particular",
-                "partner",
-                "party",
-                "pass",
-                "passage",
-                "passenger",
-                "past",
-                "paste",
-                "pastry",
-                "path",
-                "patience",
-                "patient",
-                "patriotic",
-                "pattern",
-                "pause",
-                "paw",
-                "pay",
-                "peace",
-                "pearl",
-                "peculiar",
-                "pen",
-                "pencil",
-                "penny",
-                "people",
-                "per",
-                "perfect",
-                "perfection",
-                "perform",
-                "performance",
-                "perhaps",
-                "permanent",
-                "permission",
-                "permit",
-                "person",
-                "persuade",
-                "persuasion",
-                "pet",
-                "photograph",
-                "photography",
-                "pick",
-                "picture",
-                "piece",
-                "pig",
-                "pigeon",
-                "pile",
-                "pin",
-                "pinch",
-                "pink",
-                "pint",
-                "pipe",
-                "pity",
-                "place",
-                "plain",
-                "plan",
-                "plant",
-                "plaster",
-                "plate",
-                "play",
-                "pleasant",
-                "please",
-                "pleasure",
-                "plenty",
-                "plow",
-                "plural",
-                "pocket",
-                "poem",
-                "poet",
-                "point",
-                "poison",
-                "police",
-                "polish",
-                "polite",
-                "political",
-                "politician",
-                "politics",
-                "pool",
-                "poor",
-                "popular",
-                "population",
-                "position",
-                "possess",
-                "possession",
-                "possessor",
-                "possible",
-                "post",
-                "postpone",
-                "pot",
-                "pound",
-                "pour",
-                "poverty",
-                "powder",
-                "power",
-                "practical",
-                "practice",
-                "praise",
-                "pray",
-                "preach",
-                "precious",
-                "prefer",
-                "preference",
-                "prejudice",
-                "prepare",
-                "presence",
-                "present",
-                "preserve",
-                "president",
-                "press",
-                "pressure",
-                "pretend",
-                "pretense",
-                "pretty",
-                "prevent",
-                "prevention",
-                "price",
-                "pride",
-                "priest",
-                "print",
-                "prison",
-                "private",
-                "prize",
-                "probable",
-                "problem",
-                "procession",
-                "produce",
-                "product",
-                "production",
-                "profession",
-                "profit",
-                "program",
-                "progress",
-                "promise",
-                "prompt",
-                "pronounce",
-                "pronunciation",
-                "proof",
-                "proper",
-                "property",
-                "proposal",
-                "propose",
-                "protect",
-                "protection",
-                "proud",
-                "prove",
-                "provide",
-                "public",
-                "pull",
-                "pump",
-                "punctual",
-                "punish",
-                "pupil",
-                "pure",
-                "purple",
-                "purpose",
-                "push",
-                "put",
-                "puzzle"
-            ],
-            "Q": [
-                "qualification",
-                "qualify",
-                "quality",
-                "quantity",
-                "quarrel",
-                "quart",
-                "quarter",
-                "queen",
-                "question",
-                "quick",
-                "quiet",
-                "quite"
-            ],
-            "R": [
-                "rabbit",
-                "race",
-                "radio",
-                "rail",
-                "railroad",
-                "rain",
-                "raise",
-                "rake",
-                "rank",
-                "rapid",
-                "rare",
-                "rate",
-                "rather",
-                "raw",
-                "ray",
-                "razor",
-                "reach",
-                "read",
-                "ready",
-                "real",
-                "realize",
-                "reason",
-                "reasonable",
-                "receipt",
-                "receive",
-                "recent",
-                "recognition",
-                "recognize",
-                "recommend",
-                "record",
-                "red",
-                "redden",
-                "reduce",
-                "reduction",
-                "refer",
-                "reference",
-                "reflect",
-                "reflection",
-                "refresh",
-                "refuse",
-                "regard",
-                "regret",
-                "regular",
-                "rejoice",
-                "relate",
-                "relation",
-                "relative",
-                "relief",
-                "relieve",
-                "religion",
-                "remain",
-                "remark",
-                "remedy",
-                "remember",
-                "remind",
-                "rent",
-                "repair",
-                "repeat",
-                "repetition",
-                "replace",
-                "reply",
-                "report",
-                "represent",
-                "representative",
-                "reproduce",
-                "reproduction",
-                "republic",
-                "reputation",
-                "request",
-                "rescue",
-                "reserve",
-                "resign",
-                "resist",
-                "resistance",
-                "respect",
-                "responsible",
-                "rest",
-                "restaurant",
-                "result",
-                "retire",
-                "return",
-                "revenge",
-                "review",
-                "reward",
-                "ribbon",
-                "rice",
-                "rich",
-                "rid",
-                "ride",
-                "right",
-                "ring",
-                "ripe",
-                "ripen",
-                "rise",
-                "risk",
-                "rival",
-                "rivalry",
-                "river",
-                "road",
-                "roar",
-                "roast",
-                "rob",
-                "robbery",
-                "rock",
-                "rod",
-                "roll",
-                "roof",
-                "room",
-                "root",
-                "rope",
-                "rot",
-                "rotten",
-                "rough",
-                "round",
-                "row",
-                "royal",
-                "royalty",
-                "rub",
-                "rubber",
-                "rubbish",
-                "rude",
-                "rug",
-                "ruin",
-                "rule",
-                "run",
-                "rush",
-                "rust"
-            ],
-            "S": [
-                "sacred",
-                "sacrifice",
-                "sad",
-                "sadden",
-                "saddle",
-                "safe",
-                "safety",
-                "sail",
-                "sailor",
-                "sake",
-                "salary",
-                "sale",
-                "salesman",
-                "salt",
-                "same",
-                "sample",
-                "sand",
-                "satisfaction",
-                "satisfactory",
-                "satisfy",
-                "sauce",
-                "saucer",
-                "save",
-                "saw",
-                "say",
-                "scale",
-                "scarce",
-                "scatter",
-                "scene",
-                "scenery",
-                "scent",
-                "school",
-                "science",
-                "scientific",
-                "scientist",
-                "scissors",
-                "scold",
-                "scorn",
-                "scrape",
-                "scratch",
-                "screen",
-                "screw",
-                "sea",
-                "search",
-                "season",
-                "seat",
-                "second",
-                "secrecy",
-                "secret",
-                "secretary",
-                "see",
-                "seed",
-                "seem",
-                "seize",
-                "seldom",
-                "self",
-                "selfish",
-                "sell",
-                "send",
-                "sense",
-                "sensitive",
-                "sentence",
-                "separate",
-                "separation",
-                "serious",
-                "servant",
-                "serve",
-                "service",
-                "set",
-                "settle",
-                "several",
-                "severe",
-                "sew",
-                "shade",
-                "shadow",
-                "shake",
-                "shall",
-                "shallow",
-                "shame",
-                "shape",
-                "share",
-                "sharp",
-                "sharpen",
-                "shave",
-                "she",
-                "sheep",
-                "sheet",
-                "shelf",
-                "shell",
-                "shelter",
-                "shield",
-                "shilling",
-                "shine",
-                "ship",
-                "shirt",
-                "shock",
-                "shoe",
-                "shoot",
-                "shop",
-                "shore",
-                "short",
-                "shorten",
-                "should",
-                "shoulder",
-                "shout",
-                "show",
-                "shower",
-                "shut",
-                "sick",
-                "side",
-                "sight",
-                "sign",
-                "signal",
-                "signature",
-                "silence",
-                "silent",
-                "silk",
-                "silver",
-                "simple",
-                "simplicity",
-                "since",
-                "sincere",
-                "sing",
-                "single",
-                "sink",
-                "sir",
-                "sister",
-                "sit",
-                "situation",
-                "size",
-                "skill",
-                "skin",
-                "skirt",
-                "sky",
-                "slave",
-                "slavery",
-                "sleep",
-                "slide",
-                "slight",
-                "slip",
-                "slippery",
-                "slope",
-                "slow",
-                "small",
-                "smell",
-                "smile",
-                "smoke",
-                "smooth",
-                "snake",
-                "snow",
-                "so",
-                "soap",
-                "social",
-                "society",
-                "sock",
-                "soft",
-                "soften",
-                "soil",
-                "soldier",
-                "solemn",
-                "solid",
-                "solution",
-                "solve",
-                "some",
-                "somebody",
-                "somehow",
-                "someone",
-                "something",
-                "sometime",
-                "sometimes",
-                "somewhere",
-                "son",
-                "song",
-                "soon",
-                "sore",
-                "sorrow",
-                "sorry",
-                "sort",
-                "soul",
-                "sound",
-                "soup",
-                "sour",
-                "south",
-                "sow",
-                "space",
-                "spade",
-                "spare",
-                "speak",
-                "special",
-                "speech",
-                "speed",
-                "spell",
-                "spend",
-                "spill",
-                "spin",
-                "spirit",
-                "spit",
-                "spite",
-                "splendid",
-                "split",
-                "spoil",
-                "spoon",
-                "sport",
-                "spot",
-                "spread",
-                "spring",
-                "square",
-                "staff",
-                "stage",
-                "stain",
-                "stair",
-                "stamp",
-                "stand",
-                "standard",
-                "staple",
-                "star",
-                "start",
-                "state",
-                "station",
-                "stay",
-                "steady",
-                "steam",
-                "steel",
-                "steep",
-                "steer",
-                "stem",
-                "step",
-                "stick",
-                "stiff",
-                "stiffen",
-                "still",
-                "sting",
-                "stir",
-                "stock",
-                "stocking",
-                "stomach",
-                "stone",
-                "stop",
-                "store",
-                "storm",
-                "story",
-                "stove",
-                "straight",
-                "straighten",
-                "strange",
-                "strap",
-                "straw",
-                "stream",
-                "street",
-                "strength",
-                "strengthen",
-                "stretch",
-                "strict",
-                "strike",
-                "string",
-                "strip",
-                "stripe",
-                "stroke",
-                "strong",
-                "struggle",
-                "student",
-                "study",
-                "stuff",
-                "stupid",
-                "subject",
-                "substance",
-                "succeed",
-                "success",
-                "such",
-                "suck",
-                "sudden",
-                "suffer",
-                "sugar",
-                "suggest",
-                "suggestion",
-                "suit",
-                "summer",
-                "sun",
-                "supper",
-                "supply",
-                "support",
-                "suppose",
-                "sure",
-                "surface",
-                "surprise",
-                "surround",
-                "suspect",
-                "suspicion",
-                "suspicious",
-                "swallow",
-                "swear",
-                "sweat",
-                "sweep",
-                "sweet",
-                "sweeten",
-                "swell",
-                "swim",
-                "swing",
-                "sword",
-                "sympathetic",
-                "sympathy",
-                "system"
-            ],
-            "T": [
-                "table",
-                "tail",
-                "tailor",
-                "take",
-                "talk",
-                "tall",
-                "tame",
-                "tap",
-                "taste",
-                "tax",
-                "taxi",
-                "tea",
-                "teach",
-                "tear",
-                "telegraph",
-                "telephone",
-                "tell",
-                "temper",
-                "temperature",
-                "temple",
-                "tempt",
-                "tend",
-                "tender",
-                "tent",
-                "term",
-                "terrible",
-                "test",
-                "than",
-                "thank",
-                "that",
-                "the",
-                "theater",
-                "theatrical",
-                "then",
-                "there",
-                "therefore",
-                "these",
-                "they",
-                "thick",
-                "thicken",
-                "thief",
-                "thin",
-                "thing",
-                "think",
-                "thirst",
-                "this",
-                "thorn",
-                "thorough",
-                "those",
-                "though",
-                "thread",
-                "threat",
-                "threaten",
-                "throat",
-                "through",
-                "throw",
-                "thumb",
-                "thunder",
-                "thus",
-                "ticket",
-                "tide",
-                "tidy",
-                "tie",
-                "tight",
-                "tighten",
-                "till",
-                "time",
-                "tin",
-                "tip",
-                "tire",
-                "title",
-                "to",
-                "tobacco",
-                "today",
-                "toe",
-                "together",
-                "tomorrow",
-                "ton",
-                "tongue",
-                "tonight",
-                "too",
-                "tool",
-                "tooth",
-                "top",
-                "total",
-                "touch",
-                "tough",
-                "tour",
-                "toward",
-                "towel",
-                "tower",
-                "town",
-                "toy",
-                "track",
-                "trade",
-                "train",
-                "translate",
-                "translation",
-                "translator",
-                "trap",
-                "travel",
-                "tray",
-                "treasure",
-                "treasury",
-                "treat",
-                "tree",
-                "tremble",
-                "trial",
-                "tribe",
-                "trick",
-                "trip",
-                "trouble",
-                "true",
-                "trunk",
-                "trust",
-                "truth",
-                "try",
-                "tube",
-                "tune",
-                "turn",
-                "twist",
-                "type"
-            ],
-            "U": [
-                "ugly",
-                "umbrella",
-                "uncle",
-                "under",
-                "underneath",
-                "understand",
-                "union",
-                "unit",
-                "unite",
-                "unity",
-                "universal",
-                "universe",
-                "university",
-                "unless",
-                "until",
-                "up",
-                "upon",
-                "upper",
-                "uppermost",
-                "upright",
-                "upset",
-                "urge",
-                "urgent",
-                "use",
-                "usual"
-            ],
-            "V": [
-                "vain",
-                "valley",
-                "valuable",
-                "value",
-                "variety",
-                "various",
-                "veil",
-                "verb",
-                "verse",
-                "very",
-                "vessel",
-                "victory",
-                "view",
-                "village",
-                "violence",
-                "violent",
-                "virtue",
-                "visit",
-                "visitor",
-                "voice",
-                "vote",
-                "vowel",
-                "voyage"
-            ],
-            "W": [
-                "wage",
-                "waist",
-                "wait",
-                "waiter",
-                "wake",
-                "walk",
-                "wall",
-                "wander",
-                "want",
-                "war",
-                "warm",
-                "warmth",
-                "warn",
-                "wash",
-                "waste",
-                "watch",
-                "water",
-                "wave",
-                "wax",
-                "way",
-                "we",
-                "weak",
-                "weaken",
-                "wealth",
-                "weapon",
-                "wear",
-                "weather",
-                "weave",
-                "weed",
-                "week",
-                "weekday",
-                "weekend",
-                "weigh",
-                "weight",
-                "welcome",
-                "well",
-                "west",
-                "western",
-                "wet",
-                "what",
-                "whatever",
-                "wheat",
-                "wheel",
-                "when",
-                "whenever",
-                "where",
-                "wherever",
-                "whether",
-                "which",
-                "whichever",
-                "while",
-                "whip",
-                "whisper",
-                "whistle",
-                "white",
-                "whiten",
-                "who",
-                "whoever",
-                "whole",
-                "whom",
-                "whose",
-                "why",
-                "wicked",
-                "wide",
-                "widen",
-                "widow",
-                "widower",
-                "width",
-                "wife",
-                "wild",
-                "will",
-                "win",
-                "wind",
-                "window",
-                "wine",
-                "wing",
-                "winter",
-                "wipe",
-                "wire",
-                "wisdom",
-                "wise",
-                "wish",
-                "with",
-                "within",
-                "without",
-                "witness",
-                "woman",
-                "wonder",
-                "wood",
-                "wooden",
-                "wool",
-                "woolen",
-                "word",
-                "work",
-                "world",
-                "worm",
-                "worry",
-                "worse",
-                "worship",
-                "worth",
-                "would",
-                "wound",
-                "wrap",
-                "wreck",
-                "wrist",
-                "write",
-                "wrong"
-            ],
-            "X": [
-                "xenomorphically"
-            ],
-            "Y": [
-                "yard",
-                "year",
-                "yellow",
-                "yes",
-                "yesterday",
-                "yet",
-                "yield",
-                "you",
-                "young",
-                "youth"
-            ],
-            "Z": [
-                "zero"
-            ]
+            "A": "afraid",
+            "B": "boat",
+            "C": "calculation",
+            "D": "drive",
+            "E": "expense",
+            "F": "feed",
+            "G": "ground",
+            "H": "human",
+            "I": "interrupt",
+            "J": "juice",
+            "K": "keep",
+            "L": "live",
+            "M": "mother",
+            "N": "necessity",
+            "O": "observe",
+            "P": "pocket",
+            "Q": "question",
+            "R": "return",
+            "S": "strap",
+            "T": "truth",
+            "U": "university",
+            "V": "various",
+            "W": "way",
+            "X": "xenomorphically",
+            "Y": "yard",
+            "Z": "zebra",
         }
 
         server_group = toga.Group(
@@ -2568,13 +248,19 @@ class PyPass(toga.App):
             )
         )
 
-        self.a_box.add(user_label)
-        self.a_box.add(self.user_entry)
-        self.a_box.add(password_label)
-        self.a_box.add(self.password_entry)
-        self.a_box.add(login_button)
-        self.a_box.add(create_user_button)
-        self.a_box.add(delete_user_button)
+        add_to_screen(
+            widgets_to_add={
+                "user_label": user_label,
+                "self.user_entry": self.user_entry,
+                "password_label": password_label,
+                "self.password_entry": self.password_entry,
+                "login_button": login_button,
+                "create_user_button": create_user_button,
+                "delete_user_button": delete_user_button
+            },
+            box_to_add_to=self.a_box,
+            clear_screen=True
+        )
 
         main_box.add(self.a_box)
         self.commands.clear()
@@ -2598,25 +284,7 @@ class PyPass(toga.App):
     async def recover_key(self, _):
         backup_phrase = self.backup_phrase_entry.value.replace(" ", "").split("/")
 
-        recovered_key = ""
-
-        for word in backup_phrase:
-            # word = word.replace(" ", "").replace('"', "")
-
-            if word == '':
-                del backup_phrase[backup_phrase.index(word)]
-
-            elif word.isnumeric() is True or word == "-" or word == "=":
-                recovered_key += word
-
-            else:
-                if word[-1] == "!":
-                    recovered_key += word[0].title()
-
-                else:
-                    recovered_key += word[0]
-
-            print(word)
+        recovered_key = recover_key(backup_phrase=backup_phrase)
 
         print("The recovered key is: " + recovered_key)
 
@@ -2634,12 +302,11 @@ class PyPass(toga.App):
 
         else:
             username = self.user_entry.value
-            password_file_path = os.path.join(self.paths.data, username, ".passwords.json")
 
-            user_data = self.load_user_passwords(check_data_integrity=False)
+            user_data = load_user_data(password_file_path=self.data_file_path)
             user_data["key"] = self.main_fernet.encrypt(recovered_key.encode()).decode()
 
-            with open(password_file_path, mode="w") as passwords_file:
+            with open(self.data_file_path, mode="w") as passwords_file:
                 json.dump(user_data, passwords_file, indent=4)
 
             dialog = toga.InfoDialog(
@@ -2703,6 +370,12 @@ class PyPass(toga.App):
                 style=self.button_style
             )
 
+            delete_service_button = toga.Button(
+                text="Delete Service",
+                on_press=self.delete_service,
+                style=self.button_style
+            )
+
             delete_username_button = toga.Button(
                 text="Delete Username",
                 on_press=self.delete_username,
@@ -2715,23 +388,26 @@ class PyPass(toga.App):
                 style=self.button_style
             )
 
-            self.add_to_screen(
-                widgets=[
-                    service_label,
-                    self.service_entry,
-                    username_label,
-                    self.username_entry,
-                    password_label,
-                    self.service_password_entry,
-                    add_password_button,
-                    generate_password_button,
-                    edit_password_button,
-                    get_password_button,
-                    delete_username_button,
-                    create_backup_phrase_button
-                ],
+            add_to_screen(
+                widgets_to_add={
+                    "service_label": service_label,
+                    "self.service_entry": self.service_entry,
+                    "username_label": username_label,
+                    "self.username_entry": self.username_entry,
+                    "password_label": password_label,
+                    "self.service_password_entry": self.service_password_entry,
+                    "add_password_button": add_password_button,
+                    "generate_password_button": generate_password_button,
+                    "edit_password_button": edit_password_button,
+                    "get_password_button": get_password_button,
+                    "delete_service_button": delete_service_button,
+                    "delete_username_button": delete_username_button,
+                    "create_backup_phrase_button": create_backup_phrase_button
+                },
+                box_to_add_to=self.a_box,
                 clear_screen=True
             )
+
         else:
             user_label = toga.Label(
                 text="User:",
@@ -2773,28 +449,19 @@ class PyPass(toga.App):
                 )
             )
 
-            self.add_to_screen(
-                widgets=[
-                    user_label,
-                    self.user_entry,
-                    password_label,
-                    self.password_entry,
-                    login_button,
-                    create_user_button,
-                    delete_user_button
-                ],
+            add_to_screen(
+                widgets_to_add={
+                    "user_label": user_label,
+                    "self.user_entry": self.user_entry,
+                    "password_label": password_label,
+                    "self.password_entry": self.password_entry,
+                    "login_button": login_button,
+                    "create_user_button": create_user_button,
+                    "delete_user_button": delete_user_button
+                },
+                box_to_add_to=self.a_box,
                 clear_screen=True
             )
-
-    def load_env(self):
-            if not os.path.exists(os.path.join(self.paths.data, ".env")):
-                return None
-
-            with open(os.path.join(self.paths.data, ".env"), mode="r") as env_file:
-                env_data = json_repair.load(env_file)
-
-            for key in env_data.keys():
-                os.environ[key] = env_data[key]
 
     async def get_main_fernet_object(self) -> Fernet or None:
         main_key = os.environ.get("MAIN_KEY")
@@ -2840,8 +507,6 @@ class PyPass(toga.App):
 
                     os.rmdir(user_path)
 
-        print(main_key)
-
         main_fernet = Fernet(main_key)
         return main_fernet
 
@@ -2863,11 +528,12 @@ class PyPass(toga.App):
                 on_press=self.return_to_home_screen
             )
 
-        return self.add_to_screen(
-            widgets=[
-                data_path_label,
-                return_to_home_button
-            ],
+        return add_to_screen(
+            widgets_to_add={
+                "data_path_label": data_path_label,
+                "return_to_home_button": return_to_home_button
+            },
+            box_to_add_to=self.a_box,
             clear_screen=True
         )
 
@@ -2902,11 +568,29 @@ class PyPass(toga.App):
 
             return None
 
-        users_passwords = self.load_user_passwords()
+        user_data = load_user_data(password_file_path=os.path.join(username_path, ".passwords.json"))
+
+        if user_data == "Invalid data saved":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to login. Cannot load user data"
+            )
+
+            await self.dialog(dialog)
+            return None
+
+        elif user_data == "Password file path doesn't exist":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to login. User data file doesn't exist"
+            )
+
+            await self.dialog(dialog)
+            return None
 
         try:
-            user_password = users_passwords[username]
-            user_key = self.main_fernet.decrypt(users_passwords["key"].encode())
+            user_password = user_data[username]
+            user_key = self.main_fernet.decrypt(user_data["key"].encode())
 
         except KeyError:
             dialog = toga.ErrorDialog(
@@ -2939,23 +623,22 @@ class PyPass(toga.App):
                     style=self.button_style
                 )
 
-                self.add_to_screen(
-                    widgets=[
-                        backup_phrase_label,
-                        self.backup_phrase_entry,
-                        recover_backup_phrase_button
-                    ],
+                return add_to_screen(
+                    widgets_to_add={
+                        "backup_phrase_label": backup_phrase_label,
+                        "self.backup_phrase_entry": self.backup_phrase_entry,
+                        "recover_backup_phrase_button": recover_backup_phrase_button
+                    },
+                    box_to_add_to=self.a_box,
                     clear_screen=True
                 )
 
-                return None
-
         cipher = Fernet(user_key)
 
-        if users_passwords == {}:
+        if user_data == {}:
             dialog = toga.ConfirmDialog(
                 title=self.confirm_title,
-                message="Saved passwords are corrupt. Local recovery has already been attempted. Attempt recovery from server?"
+                message="Saved passwords are corrupt. Attempt recovery from server?"
             )
 
             dialog_result = await self.dialog(dialog)
@@ -2985,37 +668,47 @@ class PyPass(toga.App):
                     style=self.button_style
                 )
 
-                self.add_to_screen(
-                    widgets=[
-                        server_address_label,
-                        self.server_address_entry,
-                        server_port_label,
-                        self.server_port_entry,
-                        recover_passwords_button
-                    ],
+                add_to_screen(
+                    widgets_to_add={
+                        "server_address_label": server_address_label,
+                        "self.server_address_entry": self.server_address_entry,
+                        "server_port_label": server_port_label,
+                        "self.server_port_entry": self.server_port_entry,
+                        "recover_passwords_button": recover_passwords_button
+                    },
+                    box_to_add_to=self.a_box,
                     clear_screen=True
                 )
 
+        password_correct = check_password(
+            entered_password=password,
+            saved_password=user_password,
+            password_cipher=cipher
+        )
 
-        print(cipher.decrypt(user_password).decode())
-
-        if password == cipher.decrypt(user_password).decode():
+        if password_correct == "Correct password entered":
             self.logged_in_user = username
             self.data_file_path = os.path.join(self.paths.data, self.logged_in_user, ".passwords.json")
-
-            print(self.main_window.size)
 
             self.return_to_home_screen()
 
             return None
 
-        else:
+        elif password_correct == "Incorrect password entered":
             dialog = toga.ErrorDialog(
                 title=self.error_title,
                 message="Incorrect password"
             )
 
-            await self.dialog(dialog)
+            return await self.dialog(dialog)
+
+        else:
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Unknown case happened"
+            )
+
+            return await self.dialog(dialog)
 
     async def create_user(self, _):
         user = self.user_entry.value
@@ -3035,12 +728,9 @@ class PyPass(toga.App):
         if not is_valid:
             return None
 
-        encryption_key = Fernet.generate_key()
-        cipher = Fernet(encryption_key)
+        create_user_result = create_new_user(user_data_path=os.path.join(self.paths.data, user), user=user, password=password, main_cipher=self.main_fernet)
 
-        username_path = os.path.join(self.paths.data, user)
-
-        if os.path.exists(username_path):
+        if create_user_result == "User already exists":
             dialog = toga.ErrorDialog(
                 title=self.error_title,
                 message=f"User {user} already exists"
@@ -3049,34 +739,34 @@ class PyPass(toga.App):
             await self.dialog(dialog)
             return None
 
-        user_data = {
-            user: cipher.encrypt(password.encode()).decode(),
-            "key": self.main_fernet.encrypt(encryption_key).decode()
-        }
+        else:
+            dialog = toga.InfoDialog(
+                title=self.success_title,
+                message=f"Successfully created user {user}"
+            )
 
-        os.mkdir(username_path)
-
-        with open(self.data_file_path, mode="w") as data_file:
-            json.dump(user_data, data_file, indent=4)
-
-        dialog = toga.InfoDialog(
-            title=self.success_title,
-            message=f"Successfully created user {user}"
-        )
-
-        await self.dialog(dialog)
-        return None
+            await self.dialog(dialog)
+            return None
 
     async def delete_user(self, _):
         user = self.user_entry.value
         password = self.password_entry.value
 
-        user_data = self.load_user_passwords()
+        user_data = load_user_data(password_file_path=os.path.join(self.paths.data, user, ".passwords.json"))
 
-        if user_data == {}:
+        if user_data == "":
             dialog = toga.ErrorDialog(
                 title=self.error_title,
-                message="Cannot delete user. Failed to load user data or user doesn't exist"
+                message="Cannot delete user. User doesn't exist"
+            )
+
+            await self.dialog(dialog)
+            return None
+
+        elif user_data == "Invalid data saved":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Cannot delete user. Failed to load passwords"
             )
 
             await self.dialog(dialog)
@@ -3147,7 +837,25 @@ class PyPass(toga.App):
         username = self.username_entry.value
         password = self.service_password_entry.value
 
-        user_data = self.load_user_passwords()
+        user_data = load_user_data(self.data_file_path)
+
+        if user_data == "Invalid data saved":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to add password. Cannot load user data"
+            )
+
+            await self.dialog(dialog)
+            return None
+
+        elif user_data == "Password file path doesn't exist":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to add password. User data file doesn't exist"
+            )
+
+            await self.dialog(dialog)
+            return None
 
         if not "data" in user_data.keys():
             user_data["data"] = {}
@@ -3193,12 +901,19 @@ class PyPass(toga.App):
         with open(self.data_file_path, mode="w") as data_file:
             json.dump(user_data, data_file, indent=4)
 
-        self.copy_to_clipboard(password)
+        clipboard_result = copy_to_clipboard(password)
 
-        dialog = toga.InfoDialog(
-            title=self.success_title,
-            message=f"Successfully added username {username} to service {service}. \n\nThe Password has been copied to your clipboard"
-        )
+        if clipboard_result == "Can't copy to clipboard. Unsupported OS":
+            dialog = toga.InfoDialog(
+                title=self.success_title,
+                message=f"Successfully added username {username} to service {service}."
+            )
+
+        else:
+            dialog = toga.InfoDialog(
+                title=self.success_title,
+                message=f"Successfully added username {username} to service {service}. \n\nThe Password has been copied to your clipboard"
+            )
 
         await self.dialog(dialog)
         return None
@@ -3211,7 +926,25 @@ class PyPass(toga.App):
         new_key = Fernet.generate_key()
         cipher = Fernet(new_key)
 
-        user_data = self.load_user_passwords()
+        user_data = load_user_data(password_file_path=self.data_file_path)
+
+        if user_data == "Invalid data saved":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to edit password. Cannot load user data"
+            )
+
+            await self.dialog(dialog)
+            return None
+
+        elif user_data == "Password file path doesn't exist":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to edit password. User data file doesn't exist"
+            )
+
+            await self.dialog(dialog)
+            return None
 
         is_valid = await self.validate_values(
             to_validate={
@@ -3259,12 +992,19 @@ class PyPass(toga.App):
         with open(self.data_file_path, mode="w") as data_file:
             json.dump(user_data, data_file, indent=4)
 
-            self.copy_to_clipboard(new_password)
+        clipboard_result = copy_to_clipboard(new_password)
 
-        dialog = toga.InfoDialog(
-            title=self.success_title,
-            message=f"Successfully edited password for service {service} username {username}\n\nThe new password has also been copied to your clipboard"
-        )
+        if clipboard_result == "Can't copy to clipboard. Unsupported OS":
+            dialog = toga.InfoDialog(
+                title=self.success_title,
+                message=f"Successfully edited password for service {service} username {username}."
+            )
+
+        else:
+            dialog = toga.InfoDialog(
+                title=self.success_title,
+                message=f"Successfully edited password for service {service} username {username}\n\nThe new password has also been copied to your clipboard"
+            )
 
         await self.dialog(dialog)
         return None
@@ -3272,7 +1012,25 @@ class PyPass(toga.App):
     async def get_password(self, _):
         service = self.service_entry.value
         username = self.username_entry.value
-        user_data = self.load_user_passwords()
+        user_data = load_user_data(self.data_file_path)
+
+        if user_data == "Invalid data saved":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to get password. Cannot load user data"
+            )
+
+            await self.dialog(dialog)
+            return None
+
+        elif user_data == "Password file path doesn't exist":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to get password. User data file doesn't exist"
+            )
+
+            await self.dialog(dialog)
+            return None
 
         is_valid = await self.validate_values(
             to_validate={
@@ -3296,7 +1054,7 @@ class PyPass(toga.App):
             )
 
             await self.dialog(dialog)
-            return
+            return None
 
         if not username in user_data["data"][service].keys():
             dialog = toga.ErrorDialog(
@@ -3312,12 +1070,19 @@ class PyPass(toga.App):
 
         cipher = Fernet(encryption_key.encode())
 
-        self.copy_to_clipboard(cipher.decrypt(encrypted_password).decode())
+        clipboard_result = copy_to_clipboard(cipher.decrypt(encrypted_password).decode())
 
-        dialog = toga.InfoDialog(
-            title=self.success_title,
-            message=f"Password for service {service} and username {username} is: \n\n{cipher.decrypt(encrypted_password).decode()}. \n\nIt has been copied to your clipboard"
-        )
+        if clipboard_result == "Can't copy to clipboard. Unsupported OS":
+            dialog = toga.InfoDialog(
+                title=self.success_title,
+                message=f"Password for service {service} and username {username} is: \n\n{cipher.decrypt(encrypted_password).decode()}."
+            )
+
+        else:
+            dialog = toga.InfoDialog(
+                title=self.success_title,
+                message=f"Password for service {service} and username {username} is: \n\n{cipher.decrypt(encrypted_password).decode()}. \n\nIt has been copied to your clipboard"
+            )
 
         await self.dialog(dialog)
         return None
@@ -3326,7 +1091,37 @@ class PyPass(toga.App):
         service = self.service_entry.value
         username = self.username_entry.value
 
-        user_data = self.load_user_passwords()
+        is_valid = await self.validate_values(
+            to_validate={
+                "Service": service,
+                "Username": username
+            },
+            message_for_dialog="<value> cannot be empty",
+            inverse_check=True
+        )
+
+        if not is_valid:
+            return None
+
+        user_data = load_user_data(password_file_path=self.data_file_path)
+
+        if user_data == "Invalid data saved":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to delete username. Cannot load user data"
+            )
+
+            await self.dialog(dialog)
+            return None
+
+        elif user_data == "Password file path doesn't exist":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to delete username. User data file doesn't exist"
+            )
+
+            await self.dialog(dialog)
+            return None
 
         if "data" not in user_data.keys():
             dialog = toga.ErrorDialog(
@@ -3367,13 +1162,96 @@ class PyPass(toga.App):
 
         return await self.dialog(dialog)
 
+    async def delete_service(self, _):
+        service = self.service_entry.value
+        user_data = load_user_data(password_file_path=self.data_file_path)
+
+        if user_data == "Invalid data saved":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to delete service. Cannot load user data"
+            )
+
+            await self.dialog(dialog)
+            return None
+
+        elif user_data == "Password file path doesn't exist":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to delete service. User data file doesn't exist"
+            )
+
+            await self.dialog(dialog)
+            return None
+
+        is_valid = await self.validate_values(
+            to_validate={
+                "Service": service,
+            },
+            message_for_dialog="<value> cannot be empty",
+            inverse_check=True
+        )
+
+        if not is_valid:
+            return None
+
+        if "data" not in user_data.keys():
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message=f"Can't delete password for service {service}. No passwords saved"
+            )
+
+            await self.dialog(dialog)
+            return None
+
+        elif service not in user_data["data"].keys():
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message=f"Can't delete password for service {service}. No such service saved"
+            )
+
+            await self.dialog(dialog)
+            return None
+
+        del user_data["data"][service]
+
+        with open(self.data_file_path, mode="w") as data_file:
+            json.dump(user_data, data_file, indent=4)
+
+        dialog = toga.InfoDialog(
+            title=self.success_title,
+            message=f"Successfully deleted service {service}"
+        )
+
+        return await self.dialog(dialog)
+
     async def generate_password(self, _):
         new_password = secrets.token_urlsafe(20)
         self.service_password_entry.value = new_password
         print(self.service_password_entry.value)
 
     async def create_backup_phrase(self, _):
-        user_key: str = self.main_fernet.decrypt(self.load_user_passwords()["key"]).decode()
+        user_data = load_user_data(password_file_path=self.data_file_path)
+
+        if user_data == "Invalid data saved":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to create backup phrase. Cannot load user data"
+            )
+
+            await self.dialog(dialog)
+            return None
+
+        elif user_data == "Password file path doesn't exist":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to create backup phrase. User data file doesn't exist"
+            )
+
+            await self.dialog(dialog)
+            return None
+
+        user_key: str = self.main_fernet.decrypt(user_data["key"]).decode()
         backup_phrase = []
 
         print(user_key)
@@ -3384,10 +1262,10 @@ class PyPass(toga.App):
                 string_to_append = character
 
             elif character.isupper():
-                string_to_append = f"{random.choice(self.backup_words[character.upper()])}!"
+                string_to_append = self.backup_words[character.upper()] + "!"
 
             else:
-                string_to_append = f"{random.choice(self.backup_words[character.upper()])}"
+                string_to_append = self.backup_words[character.upper()]
 
             if not user_key.index(character) % 3 == 0:
                 string_to_append += "    "
@@ -3404,18 +1282,28 @@ class PyPass(toga.App):
             phrase_copy_safe.append(word)
             print(word)
 
-        self.copy_to_clipboard(
+        copy_result = copy_to_clipboard(
             str(phrase_copy_safe).replace("[", "").replace("]", "").replace(",", "").replace("'", ""))
+        
+        if copy_result == "Can't copy to clipboard. Unsupported OS":
+            backup_phrase_label = toga.Label(
+                text=textwrap.fill(text=f"Your backup phrase is: \n\n{str(phrase_copy_safe)}"
+                                   "\n\nSAVE THIS SOMEWHERE ELSE!!! If your key gets lost, you will not be able to recover it without"
+                                   " this backup phrase.".replace("[", "").replace("]", "")
+                                   .replace(",", "").replace("'", ""), width=40, drop_whitespace=False),
+                style=self.label_style
+            )
+
+        else:
+            backup_phrase_label = toga.Label(
+                text=textwrap.fill(f"Your backup phrase has been copied to your clipboard."
+                                   "\n\nSAVE THIS SOMEWHERE ELSE!!! If your key gets lost, you will not be able to recover it without"
+                                   " this backup phrase.".replace("[", "").replace("]", "")
+                                   .replace(",", "").replace("'", ""), 40, drop_whitespace=False),
+                style=self.label_style
+            )
 
         print(self.main_window.size)
-
-        backup_phrase_label = toga.Label(
-            text=textwrap.fill(f"Your backup phrase has been copied to your clipboard."
-                               "\n\nSAVE THIS SOMEWHERE ELSE!!! If your key gets lost, you will not be able to recover it without"
-                               " this backup phrase.".replace("[", "").replace("]", "")
-                               .replace(",", "").replace("'", ""), 40, drop_whitespace=False),
-            style=self.label_style
-        )
 
         next_button = toga.Button(
             text="Continue to home",
@@ -3423,19 +1311,41 @@ class PyPass(toga.App):
             style=self.button_style
         )
 
-        self.add_to_screen(
-            widgets=[
-                backup_phrase_label,
-                next_button
-            ],
+        add_to_screen(
+            widgets_to_add={
+                "backup_phrase_label": backup_phrase_label,
+                "next_button": next_button
+            },
+            box_to_add_to=self.a_box,
             clear_screen=True
         )
+        return None
 
     async def migrate_data(self, _=None, send_data=False, set_up_server=False):
         if send_data:
             user = self.logged_in_user
             main_key = os.environ.get("MAIN_KEY")
-            user_data = json.dumps(self.load_user_passwords())
+            user_data = load_user_data(password_file_path=self.data_file_path)
+
+            if user_data == "Invalid data saved":
+                dialog = toga.ErrorDialog(
+                    title=self.error_title,
+                    message="Failed to migrate data. Cannot load user data"
+                )
+
+                await self.dialog(dialog)
+                return None
+
+            elif user_data == "Password file path doesn't exist":
+                dialog = toga.ErrorDialog(
+                    title=self.error_title,
+                    message="Failed to migrate data. User data file doesn't exist"
+                )
+
+                await self.dialog(dialog)
+                return None
+
+            user_data = json.dumps(user_data)
 
             httpx.post(f"http://{self.to_device_address_input.value}:{self.to_device_port_input.value}/{user}/{user_data}/{main_key}")
             httpx.post(f"http://{self.to_device_address_input.value}:{self.to_device_port_input.value}/shutdown")
@@ -3473,7 +1383,7 @@ class PyPass(toga.App):
             while not hasattr(self, "migration_successful"):
                 await asyncio.sleep(10)
 
-            await asyncio.to_thread(self.load_env)
+            await asyncio.to_thread(load_env, env_path=os.path.join(self.paths.data, ".env"), env_object=os.environ)
 
             dialog = toga.InfoDialog(
                 title=self.success_title,
@@ -3517,14 +1427,15 @@ class PyPass(toga.App):
 
             print("Adding widgets to screen")
 
-            self.add_to_screen(
-                widgets=[
-                    to_device_address_label,
-                    self.to_device_address_input,
-                    to_device_port_label,
-                    self.to_device_port_input,
-                    send_data_button
-                ],
+            add_to_screen(
+                widgets_to_add={
+                    "to_device_address_label": to_device_address_label,
+                    "self.to_device_address_input": self.to_device_address_input,
+                    "to_device_port_label": to_device_port_label,
+                    "self.to_device_port_input": self.to_device_port_input,
+                    "send_data_button": send_data_button
+                },
+                box_to_add_to=self.a_box,
                 clear_screen=True
             )
             
@@ -3572,14 +1483,15 @@ class PyPass(toga.App):
                         on_press=partial(self.migrate_data, set_up_server=True)
                     )
 
-                    return self.add_to_screen(
-                        widgets=[
-                            select_address_label,
-                            self.server_address_selection,
-                            server_port_label,
-                            self.server_port_entry,
-                            start_server_button
-                        ],
+                    return add_to_screen(
+                        widgets_to_add={
+                            "select_address_label": select_address_label,
+                            "self.server_address_selection": self.server_address_selection,
+                            "server_port_label": server_port_label,
+                            "self.server_port_entry": self.server_port_entry,
+                            "start_server_button": start_server_button
+                        },
+                        box_to_add_to=self.a_box,
                         clear_screen=True
                     )
 
@@ -3591,124 +1503,6 @@ class PyPass(toga.App):
 
                 return await self.dialog(dialog)
 
-    def load_user_passwords(self, check_data_integrity=True) -> dict:
-        username = self.user_entry.value
-        password_file_path = os.path.join(self.paths.data, username, ".passwords.json")
-
-        if not os.path.exists(password_file_path):
-            return {}
-
-        user_data = json_repair.from_file(password_file_path)
-
-        if user_data == "" and check_data_integrity == True:
-            recovered_data = {}
-
-            with open(password_file_path, mode="r") as data_file:
-                user_data_list = data_file.readlines()
-                print(user_data_list)
-
-            print("Looking for User")
-            if f'"{username}":' in user_data_list[1] and '"key":' in user_data_list[2]:
-                print("Found User")
-                new_key = Fernet.generate_key()
-                cipher = Fernet(new_key)
-
-                user_password = user_data_list[1].replace(f'"{username}": ', "").replace('"', '').replace(",",
-                                                                                                          "").replace(
-                    " ", "")
-                old_key = user_data_list[2].replace('"key": ', "").replace('"', "").replace(",", "").replace(" ", "")
-
-                user_login_data = {
-                    username: cipher.encrypt(
-                        Fernet(self.main_fernet.decrypt(old_key)).decrypt(user_password)
-                    ).decode(),
-                    "key": self.main_fernet.encrypt(new_key).decode()
-                }
-
-                recovered_data = user_login_data
-
-                print("Recovered login data")
-
-                found_data_line = False
-
-                recovered_service = ""
-                recovered_username = ""
-                recovered_password = ""
-                recovered_key = ""
-
-                print("Attempting to recover services")
-                for line_data in user_data_list:
-                    line_data = line_data.replace("\n,", "")
-                    print(repr(line_data))
-
-                    if "data" in line_data:
-                        found_data_line = True
-                        continue
-
-                    print(found_data_line)
-
-                    if recovered_service == "" and line_data != "" and found_data_line:
-                        recovered_service = line_data.replace('"', '').replace(":", "").replace("{", "").replace(" ",
-                                                                                                                 "").replace(
-                            "\n", "")
-                        print("Found service")
-
-                        continue
-
-                    if recovered_username == "" and line_data != "" and found_data_line:
-                        recovered_username = line_data.replace('"', '').replace(":", "").replace("{", "").replace(" ",
-                                                                                                                  "").replace(
-                            "\n", "")
-                        print("Found username")
-
-                        continue
-
-                    if recovered_password == "" and line_data != "" and found_data_line:
-                        recovered_password = line_data.replace("password", "").replace('"', '').replace(":",
-                                                                                                        "").replace("{",
-                                                                                                                    "").replace(
-                            " ", "").replace("\n", "")
-                        print("Found password")
-
-                        continue
-
-                    if recovered_key == "" and line_data != "" and found_data_line:
-                        recovered_key = line_data.replace("key", "").replace('"', '').replace(":", "").replace("{",
-                                                                                                               "").replace(
-                            " ", "").replace("\n", "")
-                        print("Found key")
-
-                        continue
-
-                    if recovered_service != "" and \
-                            recovered_username != "" and \
-                            recovered_password != "" and \
-                            recovered_key != "":
-
-                        if "data" not in recovered_data.keys():
-                            recovered_data["data"] = {}
-
-                        if recovered_service not in recovered_data["data"].keys():
-                            recovered_data["data"][recovered_service] = {
-                                recovered_username: {
-                                    "password": recovered_password,
-                                    "key": recovered_key
-                                }
-                            }
-
-                        elif recovered_username not in recovered_data["data"][recovered_service].keys():
-                            recovered_data["data"][recovered_service][recovered_username] = {
-                                "password": recovered_password,
-                                "key": recovered_key
-                            }
-
-                with open(password_file_path, mode="w") as data_file:
-                    json.dump(recovered_data, data_file, indent=4)
-
-            return recovered_data
-
-        else:
-            return user_data
 # --------------------- Server related functions ---------------------#
 
     async def collect_server_data(self, command_called: toga.Command):
@@ -3758,16 +1552,17 @@ class PyPass(toga.App):
                 style=self.button_style
             )
 
-            self.add_to_screen(
-                widgets=[
-                    server_title_label,
-                    self.server_title_entry,
-                    server_address_label,
-                    self.server_address_entry,
-                    server_port_label,
-                    self.server_port_entry,
-                    add_server_button
-                ],
+            add_to_screen(
+                widgets_to_add={
+                    "server_title_label": server_title_label,
+                    "self.server_title_entry": self.server_title_entry,
+                    "server_address_label": server_address_label,
+                    "self.server_address_entry": self.server_address_entry,
+                    "server_port_label": server_port_label,
+                    "self.server_port_entry": self.server_port_entry,
+                    "add_server_button": add_server_button
+                },
+                box_to_add_to=self.a_box,
                 clear_screen=True
             )
 
@@ -3806,16 +1601,17 @@ class PyPass(toga.App):
                 style=self.button_style
             )
 
-            self.add_to_screen(
-                widgets=[
-                    server_title_label,
-                    self.server_title_entry,
-                    server_address_label,
-                    self.server_address_entry,
-                    server_port_label,
-                    self.server_port_entry,
-                    edit_server_button
-                ],
+            add_to_screen(
+                widgets_to_add={
+                    "server_title_label": server_title_label,
+                    "self.server_title_entry": self.server_title_entry,
+                    "server_address_label": server_address_label,
+                    "self.server_address_entry": self.server_address_entry,
+                    "server_port_label": server_port_label,
+                    "self.server_port_entry": self.server_port_entry,
+                    "edit_server_button": edit_server_button
+                },
+                box_to_add_to=self.a_box,
                 clear_screen=True
             )
 
@@ -3835,12 +1631,13 @@ class PyPass(toga.App):
                 style=self.button_style
             )
 
-            self.add_to_screen(
-                widgets=[
-                    server_title_label,
-                    self.server_title_entry,
-                    delete_server_button
-                ],
+            add_to_screen(
+                widgets_to_add={
+                    "server_title_label": server_title_label,
+                    "self.server_title_entry": self.server_title_entry,
+                    "delete_server_button": delete_server_button
+                },
+                box_to_add_to=self.a_box,
                 clear_screen=True
             )
 
@@ -3860,12 +1657,13 @@ class PyPass(toga.App):
                 style=self.button_style
             )
 
-            self.add_to_screen(
-                widgets=[
-                    server_title_label,
-                    self.server_title_entry,
-                    sync_passwords_button
-                ],
+            add_to_screen(
+                widgets_to_add={
+                    "server_title_label": server_title_label,
+                    "self.server_title_entry": self.server_title_entry,
+                    "sync_passwords_button": sync_passwords_button
+                },
+                box_to_add_to=self.a_box,
                 clear_screen=True
             )
 
@@ -3885,12 +1683,13 @@ class PyPass(toga.App):
                 style=self.button_style
             )
 
-            self.add_to_screen(
-                widgets=[
-                    server_title_label,
-                    self.server_title_entry,
-                    download_passwords_button
-                ],
+            add_to_screen(
+                widgets_to_add={
+                    "server_title_label": server_title_label,
+                    "self.server_title_entry": self.server_title_entry,
+                    "download_passwords_button": download_passwords_button
+                },
+                box_to_add_to=self.a_box,
                 clear_screen=True
             )
 
@@ -3910,12 +1709,13 @@ class PyPass(toga.App):
                 style=self.button_style
             )
 
-            self.add_to_screen(
-                widgets=[
-                    server_title_label,
-                    self.server_title_entry,
-                    connect_server_button
-                ],
+            add_to_screen(
+                widgets_to_add={
+                    "server_title_label": server_title_label,
+                    "self.server_title_entry": self.server_title_entry,
+                    "connect_server_button": connect_server_button
+                },
+                box_to_add_to=self.a_box,
                 clear_screen=True
             )
 
@@ -3924,8 +1724,26 @@ class PyPass(toga.App):
         server_address = self.server_address_entry.value
         server_port = self.server_port_entry.value
 
-        user_data = self.load_user_passwords()
+        user_data = load_user_data(password_file_path=self.data_file_path)
         user_data_path = os.path.join(self.paths.data, self.logged_in_user, ".passwords.json")
+
+        if user_data == "Invalid data saved":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to add new server. Cannot load user data"
+            )
+
+            await self.dialog(dialog)
+            return None
+
+        elif user_data == "Password file path doesn't exist":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to add new server. User data file doesn't exist"
+            )
+
+            await self.dialog(dialog)
+            return None
 
         is_valid = await self.validate_values(
             to_validate={
@@ -3984,8 +1802,26 @@ class PyPass(toga.App):
         server_address = self.server_address_entry.value
         server_port = self.server_port_entry.value
 
-        user_data = self.load_user_passwords()
+        user_data = load_user_data(password_file_path=self.data_file_path)
         data_path = os.path.join(self.paths.data, self.logged_in_user, ".passwords.json")
+
+        if user_data == "Invalid data saved":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to edit server. Cannot load user data"
+            )
+
+            await self.dialog(dialog)
+            return None
+
+        elif user_data == "Password file path doesn't exist":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to edit server. User data file doesn't exist"
+            )
+
+            await self.dialog(dialog)
+            return None
 
         is_valid = await self.validate_values(
             to_validate={
@@ -4027,8 +1863,26 @@ class PyPass(toga.App):
     async def delete_server(self, _):
         server_title = self.server_title_entry.value
 
-        user_data = self.load_user_passwords()
+        user_data = load_user_data(password_file_path=self.data_file_path)
         data_path = os.path.join(self.paths.data, self.logged_in_user, ".passwords.json")
+
+        if user_data == "Invalid data saved":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to delete server. Cannot load user data"
+            )
+
+            await self.dialog(dialog)
+            return None
+
+        elif user_data == "Password file path doesn't exist":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to delete server. User data file doesn't exist"
+            )
+
+            await self.dialog(dialog)
+            return None
 
         is_valid = await self.validate_values(
             to_validate={
@@ -4039,12 +1893,12 @@ class PyPass(toga.App):
         )
 
         if not is_valid:
-            return
+            return None
 
         server_exists = await self.check_for_server(server_title)
 
         if not server_exists:
-            return
+            return None
 
         del user_data["servers"][server_title]
 
@@ -4057,7 +1911,7 @@ class PyPass(toga.App):
         )
 
         await self.dialog(dialog)
-        return
+        return self.return_to_home_screen()
 
     async def upload_passwords(self, _):
         if self.server is None:
@@ -4071,7 +1925,25 @@ class PyPass(toga.App):
 
         server_title = self.server_title_entry.value
 
-        user_data = self.load_user_passwords()
+        user_data = load_user_data(password_file_path=self.data_file_path)
+
+        if user_data == "Invalid data saved":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to upload passwords to server. Cannot load user data"
+            )
+
+            await self.dialog(dialog)
+            return None
+
+        elif user_data == "Password file path doesn't exist":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to upload passwords to server. User data file doesn't exist"
+            )
+
+            await self.dialog(dialog)
+            return None
 
         is_valid = await self.validate_values(
             to_validate={
@@ -4256,7 +2128,13 @@ class PyPass(toga.App):
 
         print("Sent download command to server, await response")
 
-        downloaded_user_data_str: str = await self.receive_all()
+        downloaded_user_data_str: str = receive_all(
+            server_key=self.server_key,
+            main_cipher=self.main_fernet,
+            server_connection=self.server,
+        )
+
+        print("Finished calling receive_all")
 
         if downloaded_user_data_str.startswith("Failed to download passwords. "):
             dialog = toga.ErrorDialog(
@@ -4273,7 +2151,7 @@ class PyPass(toga.App):
         print("Received response")
 
         if not button_called.text == "Recover Passwords":
-            dialog = toga.ConfirmDialog(
+            dialog = toga.QuestionDialog(
                 title=self.confirm_title,
                 message=f"Are you sure you want to download all passwords from the server titled {server_title}? \n\n"
                         "NOTE: This will overwrite all your existing passwords. "
@@ -4303,11 +2181,31 @@ class PyPass(toga.App):
             password = self.password_entry.value
             encryption_key = Fernet.generate_key()
 
+            user_data = load_user_data(password_file_path=self.data_file_path)
+
+            if user_data == "Invalid data saved":
+                dialog = toga.ErrorDialog(
+                    title=self.error_title,
+                    message="Failed to download passwords from server. Cannot load user data"
+                )
+
+                await self.dialog(dialog)
+                return None
+
+            elif user_data == "Password file path doesn't exist":
+                dialog = toga.ErrorDialog(
+                    title=self.error_title,
+                    message="Failed to download passwords from server. User data file doesn't exist"
+                )
+
+                await self.dialog(dialog)
+                return None
+
             downloaded_user_data = {
                 user: Fernet(encryption_key).encrypt(password.encode()).decode(),
                 "key": self.main_fernet.encrypt(encryption_key).decode(),
                 "data": downloaded_server_data,
-                "servers": self.load_user_passwords()["servers"]
+                "servers": user_data["servers"]
             }
 
             with open(data_path, mode="w") as data_file:
@@ -4333,6 +2231,25 @@ class PyPass(toga.App):
 
     async def connect_to_server(self, _):
         server_title = self.server_title_entry.value
+        user_data = load_user_data(password_file_path=self.data_file_path)
+
+        if user_data == "Invalid data saved":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to connect to server. Cannot load user data"
+            )
+
+            await self.dialog(dialog)
+            return None
+
+        elif user_data == "Password file path doesn't exist":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to connect to server. User data file doesn't exist"
+            )
+
+            await self.dialog(dialog)
+            return None
 
         if self.server is not None:
             await asyncio.to_thread(self.server.close)
@@ -4344,7 +2261,7 @@ class PyPass(toga.App):
         if not server_exists:
             return None
 
-        server_data = self.load_user_passwords()["servers"][server_title]
+        server_data = user_data["servers"][server_title]
         print("Retrieved server data")
 
         try:
@@ -4390,7 +2307,25 @@ class PyPass(toga.App):
         return await self.dialog(dialog)
 
     async def check_for_server(self, server_title: str) -> bool:
-        user_data = self.load_user_passwords()
+        user_data = load_user_data(password_file_path=self.data_file_path)
+
+        if user_data == "Invalid data saved":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to check for server. Cannot load user data"
+            )
+
+            await self.dialog(dialog)
+            return False
+
+        elif user_data == "Password file path doesn't exist":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to check for server. User data file doesn't exist"
+            )
+
+            await self.dialog(dialog)
+            return False
 
         if "servers" not in user_data.keys():
             dialog = toga.ErrorDialog(
@@ -4414,46 +2349,6 @@ class PyPass(toga.App):
         return True
 
     # --------------------- Utility related functions ---------------------#
-
-    def add_to_screen(self, _=None, widgets: list[toga.Widget] = [], clear_screen=False):
-        if clear_screen:
-            self.a_box.clear()
-
-        for widget in widgets:
-            self.a_box.add(widget)
-
-    async def receive_all(self) -> str:
-        print("Receive_all called")
-        print(self.server_key)
-        cipher = Fernet(self.server_key)
-
-        encrypted_received_data: bytes = b""
-
-        while True:
-            print("Receiving new data")
-            new_received_data = self.server.recv(1024)
-
-            print(
-                f"\n ------------------------------ \n    Total received data: {encrypted_received_data} \n ------------------------------ ")
-            print(
-                f"\n ------------------------------ \n    New data received: {new_received_data} \n ------------------------------ ")
-
-            try:
-                print("Trying to decrypt total received data")
-
-                encrypted_received_data += new_received_data
-                decrypted_received_data: str = cipher.decrypt(
-                    self.main_fernet.decrypt(encrypted_received_data)).decode()
-
-            except cryptography.fernet.InvalidToken:
-                print("Couldn't decrypt received data")
-
-            else:
-                print("Data was successfully decrypted, breaking out of while loop")
-                encrypted_received_data = b""
-                break
-
-        return decrypted_received_data
 
     async def validate_values(self, to_validate: dict, message_for_dialog: str or None, expected_value: str = "",
                               dialog_to_raise=None, inverse_check: bool = False):
@@ -4497,16 +2392,6 @@ class PyPass(toga.App):
                 dialog_to_raise = None
 
         return True
-
-    @staticmethod
-    def copy_to_clipboard(data_to_copy: str):
-        if toga.platform.current_platform.lower() == "android" or "window" in toga.platform.current_platform.lower():
-            cb = Clipboard.get_clipboard()
-
-            cb.set_text(data_to_copy)
-
-        else:
-            pyperclip.copy(data_to_copy)
 
 def main():
     return PyPass()

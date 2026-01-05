@@ -1,6 +1,7 @@
 # PyPass Release Notes
 
-## 0.0.3 (04 Dec 2025)
+## 1.0.0 (12 Dec 2025)
 
-* Merge all .gitignore files into one .gitignore
-* Add System executables for PyPass
+* Add utils.py file, and start simplifying app.py file
+* Add unit tests
+* Add Delete Service functionality
