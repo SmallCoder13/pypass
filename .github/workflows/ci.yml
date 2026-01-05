@@ -125,7 +125,6 @@ jobs:
            ${{ matrix.briefcase-package-args }}
 
      - name: Upload App
-       working-directory: ./pypass
        uses: actions/upload-artifact@v4
        with:
          name: App-${{ matrix.target }}
