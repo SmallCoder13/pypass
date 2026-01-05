@@ -131,7 +131,7 @@ def test_copy_to_clipboard():
 def test_server():
     import requests
 
-    response = requests.get(f"https://api.github.com/repos/{PYPASS_SERVER_CODE_PATH}/contents/{PYPASS_SERVER_CODE_FOLDER}?ref={PYPASS_SERVER_CODE_BRANCH}", headers={"Authorization": f"Bearer {os.environ.get('GITHUB_API_TOKEN')}"})
+    response = requests.get(f"https://api.github.com/repos/{PYPASS_SERVER_CODE_PATH}/contents/{PYPASS_SERVER_CODE_FOLDER}?ref={PYPASS_SERVER_CODE_BRANCH}", headers={"Authorization": f"Bearer {os.environ.get('API_TOKEN')}"})
     response.raise_for_status()
 
     api_data = response.json()

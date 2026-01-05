@@ -92,9 +92,6 @@ jobs:
          ${{ matrix.pre-command }}
 
      - name: Build App
-       env: 
-         GITHUB_API_TOKEN: ${{ secrets.API_TOKEN }} 
-
        working-directory: ./pypass
        run: |
          ${{ matrix.briefcase-build-prefix }} \
@@ -106,6 +103,9 @@ jobs:
            ${{ matrix.briefcase-build-args }}
 
      - name: Test App
+       env:
+         API_KEY: ${{ secrets.API_KEY }}
+
        working-directory: ./pypass
        run: |
          ${{ matrix.briefcase-run-prefix }} \
