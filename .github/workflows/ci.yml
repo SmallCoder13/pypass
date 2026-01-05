@@ -85,12 +85,14 @@ jobs:
          python -m pip install briefcase
 
      - name: Setup Environment
+       working-directory: ./pypass
        run: |
          # Use GitHub's preinstalled JDK 17 for Android builds
          echo JAVA_HOME="${JAVA_HOME_17_X64:-$JAVA_HOME_17_arm64}" | tee -a ${GITHUB_ENV}
          ${{ matrix.pre-command }}
 
      - name: Build App
+       working-directory: ./pypass
        run: |
          ${{ matrix.briefcase-build-prefix }} \
          briefcase build \
@@ -101,6 +103,7 @@ jobs:
            ${{ matrix.briefcase-build-args }}
 
      - name: Test App
+       working-directory: ./pypass
        run: |
          ${{ matrix.briefcase-run-prefix }} \
          briefcase run \
@@ -111,6 +114,7 @@ jobs:
            ${{ matrix.briefcase-run-args }}
 
      - name: Package App
+       working-directory: ./pypass
        run: |
          ${{ matrix.briefcase-package-prefix }} \
          briefcase package \
@@ -121,6 +125,7 @@ jobs:
            ${{ matrix.briefcase-package-args }}
 
      - name: Upload App
+       working-directory: ./pypass
        uses: actions/upload-artifact@v4
        with:
          name: App-${{ matrix.target }}
