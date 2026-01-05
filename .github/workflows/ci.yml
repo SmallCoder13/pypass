@@ -104,7 +104,7 @@ jobs:
 
      - name: Test App
        env:
-         API_KEY: ${{ secrets.API_KEY }}
+         API_TOKEN: ${{ secrets.API_TOKEN }}
 
        working-directory: ./pypass
        run: |
