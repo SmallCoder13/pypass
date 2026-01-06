@@ -15,7 +15,6 @@ concurrency:
 
 env:
  FORCE_COLOR: "1"
- API_TOKEN: ${{ secrets.API_TOKEN }}
 
 defaults:
  run:
@@ -25,6 +24,10 @@ jobs:
  ci:
    name: Test and Package
    runs-on: ${{ matrix.runs-on }}
+
+   env:
+     API_TOKEN: ${{ secrets.API_TOKEN }}
+
    strategy:
      fail-fast: false
      matrix:
@@ -105,8 +108,12 @@ jobs:
 
      - name: Test App
 
+       env:
+         API_TOKEN: ${{ secrets.API_TOKEN }}
+
        working-directory: ./pypass
        run: |
+         echo ${{ secrets.API_TOKEN }}
          ${{ matrix.briefcase-run-prefix }} \
          briefcase run \
            ${{ matrix.platform || matrix.target }} \
