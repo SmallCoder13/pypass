@@ -6,8 +6,9 @@ import toga
 import json
 import os
 
-PYPASS_SERVER_CODE_BRANCH = "dev-branch"
 os.environ["TOGA_BACKEND"] = "toga_dummy"
+
+PYPASS_SERVER_CODE_BRANCH = "dev-branch"
 PYPASS_SERVER_CODE_FOLDER = "pypass-server"
 PYPASS_SERVER_CODE_PATH = "coryellcottage/pypass"
 
@@ -133,9 +134,12 @@ def test_copy_to_clipboard():
 def test_server():
     import requests
 
-    print(os.environ.get("API_TOKEN"))
+    API_TOKEN = os.environ.get("API_TOKEN")
 
-    response = requests.get(f"https://api.github.com/repos/{PYPASS_SERVER_CODE_PATH}/contents/{PYPASS_SERVER_CODE_FOLDER}?ref={PYPASS_SERVER_CODE_BRANCH}", headers={"Authorization": f"Bearer {os.environ.get('API_TOKEN')}"})
+    print(API_TOKEN)
+    assert API_TOKEN is not None
+
+    response = requests.get(f"https://api.github.com/repos/{PYPASS_SERVER_CODE_PATH}/contents/{PYPASS_SERVER_CODE_FOLDER}?ref={PYPASS_SERVER_CODE_BRANCH}", headers={"Authorization": f"Bearer {API_TOKEN}"})
     response.raise_for_status()
 
     api_data = response.json()
