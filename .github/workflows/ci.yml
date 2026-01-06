@@ -15,6 +15,7 @@ concurrency:
 
 env:
  FORCE_COLOR: "1"
+ API_TOKEN: ${{ secrets.API_TOKEN }}
 
 defaults:
  run:
@@ -103,8 +104,6 @@ jobs:
            ${{ matrix.briefcase-build-args }}
 
      - name: Test App
-       env:
-         API_TOKEN: ${{ secrets.API_TOKEN }}
 
        working-directory: ./pypass
        run: |
