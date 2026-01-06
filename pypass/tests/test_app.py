@@ -40,13 +40,16 @@ def test_load_env():
     print("Testing load_env...")
 
     pypass_object = PyPass(app_id="id" ,formal_name="name")
+    pypass_object.app.paths.data.mkdir(parents=True, exist_ok=True)
+
+    assert Path(pypass_object.app.paths.data, ".env").is_file() is True
 
     Path(pypass_object.app.paths.data, ".env").write_text("")
 
     assert load_env(env_path=Path(pypass_object.app.paths.data, ".env"),
                     env_object=os.environ) == "Invalid data type saved"
 
-    assert load_env(env_path=os.path.join("env_file"),
+    assert load_env(env_path=Path("env_file"),
                     env_object=os.environ) == "Env path doesn't exist"
 
     with open(Path(pypass_object.app.paths.data, ".env"), mode="w") as env_file:
@@ -58,7 +61,7 @@ def test_load_env():
         )
 
     assert load_env(
-        env_path=Path(pypass_object.app.paths.data),
+        env_path=Path(pypass_object.app.paths.data, ".env"),
         env_object=os.environ
     ) == "Loaded environment"
 
