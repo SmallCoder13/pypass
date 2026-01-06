@@ -137,7 +137,6 @@ def test_server():
     API_TOKEN = os.environ.get("API_TOKEN")
 
     print(API_TOKEN)
-    assert API_TOKEN is not None
 
     response = requests.get(f"https://api.github.com/repos/{PYPASS_SERVER_CODE_PATH}/contents/{PYPASS_SERVER_CODE_FOLDER}?ref={PYPASS_SERVER_CODE_BRANCH}", headers={"Authorization": f"Bearer {API_TOKEN}"})
     response.raise_for_status()

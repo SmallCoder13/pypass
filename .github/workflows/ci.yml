@@ -113,7 +113,7 @@ jobs:
 
        working-directory: ./pypass
        run: |
-         echo ${{ secrets.API_TOKEN }}
+         echo "$API_TOKEN"
          ${{ matrix.briefcase-run-prefix }} \
          briefcase run \
            ${{ matrix.platform || matrix.target }} \
