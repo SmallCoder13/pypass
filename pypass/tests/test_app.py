@@ -1,6 +1,7 @@
 from cryptography.fernet import Fernet
 from pypass.app import PyPass
 from pypass.utils import *
+from pathlib import Path
 import toga
 import json
 import os
@@ -40,15 +41,15 @@ def test_load_env():
 
     pypass_object = PyPass(app_id="id" ,formal_name="name")
 
-    os.mknod(os.path.join(pypass_object.app.paths.data, ".env"))
+    Path(pypass_object.app.paths.data, ".env").write_text("")
 
-    assert load_env(env_path=os.path.join(pypass_object.app.paths.data, ".env"),
+    assert load_env(env_path=Path(pypass_object.app.paths.data, ".env"),
                     env_object=os.environ) == "Invalid data type saved"
 
     assert load_env(env_path=os.path.join("env_file"),
                     env_object=os.environ) == "Env path doesn't exist"
 
-    with open(os.path.join(pypass_object.app.paths.data, ".env"), mode="w") as env_file:
+    with open(Path(pypass_object.app.paths.data, ".env"), mode="w") as env_file:
         json.dump(
             obj={
                 "MAIN_KEY": Fernet.generate_key().decode()
@@ -57,7 +58,7 @@ def test_load_env():
         )
 
     assert load_env(
-        env_path=os.path.join(pypass_object.app.paths.data, ".env"),
+        env_path=Path(pypass_object.app.paths.data),
         env_object=os.environ
     ) == "Loaded environment"
 
@@ -94,9 +95,9 @@ def test_load_user_data():
         "servers": {}
     }
 
-    assert load_user_data(os.path.join(data_path ,"passwords_file")) == "Password file path doesn't exist"
+    assert load_user_data(Path(data_path, "passwords_file")) == "Password file path doesn't exist"
 
-    os.mknod(os.path.join(data_path ,"passwords_file"))
+    Path(data_path ,"passwords_file").write_text("")
     assert load_user_data(os.path.join(data_path ,"passwords_file")) == "Invalid data saved"
 
     with open(os.path.join(data_path, "passwords_file"), mode="w") as passwords_file:
@@ -105,11 +106,11 @@ def test_load_user_data():
             fp=passwords_file
         )
 
-    print(f"Data type from load_user_data: {type(load_user_data(os.path.join(data_path, "passwords_file")))}")
+    print(f"Data type from load_user_data: {type(load_user_data(Path(data_path, "passwords_file")))}")
 
-    assert load_user_data(os.path.join(data_path, "passwords_file")) == test_data
+    assert load_user_data(Path(data_path, "passwords_file")) == test_data
 
-    os.unlink(os.path.join(data_path, "passwords_file"))
+    os.unlink(Path(data_path, "passwords_file"))
     os.rmdir(data_path)
 
 def test_create_user():
