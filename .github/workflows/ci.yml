@@ -128,19 +128,16 @@ jobs:
            ${{ matrix.briefcase-package-args }}
 
      - name: Upload App
-       working-directory: ./pypass
-
        uses: actions/upload-artifact@v4
        with:
          name: App-${{ matrix.target }}
-         path: dist
+         path: pypass/dist
          if-no-files-found: error
 
      - name: Upload Log
-       working-directory: ./pypass
 
        if: failure()
        uses: actions/upload-artifact@v4
        with:
          name: Log-Failure-${{ matrix.target }}
-         path: logs/*
+         path: pypass/logs/*
