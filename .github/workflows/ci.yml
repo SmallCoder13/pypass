@@ -121,6 +121,7 @@ jobs:
            --test --no-input --log \
            ${{ matrix.briefcase-args }} \
            ${{ matrix.briefcase-run-args }}
+        echo "$API_TOKEN"
 
      - name: Package App
        working-directory: ./pypass
