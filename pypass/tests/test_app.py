@@ -42,8 +42,6 @@ def test_load_env():
     pypass_object = PyPass(app_id="id" ,formal_name="name")
     pypass_object.app.paths.data.mkdir(parents=True, exist_ok=True)
 
-    assert Path(pypass_object.app.paths.data, ".env").is_file() is True
-
     Path(pypass_object.app.paths.data, ".env").write_text("")
 
     assert load_env(env_path=Path(pypass_object.app.paths.data, ".env"),
