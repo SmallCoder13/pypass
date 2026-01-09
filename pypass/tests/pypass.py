@@ -1,10 +1,8 @@
 import os
 import sys
+import pytest
 import tempfile
 from pathlib import Path
-
-import pytest
-
 
 def run_tests():
     project_path = Path(__file__).parent.parent
@@ -13,11 +11,12 @@ def run_tests():
     # Determine any args to pass to pytest. If there aren't any,
     # default to running the whole test suite.
     args = sys.argv[1:]
+
     if len(args) == 0:
         args = ["tests"]
 
     returncode = pytest.main(
-        [
+        args=[
             # Turn up verbosity
             "-vv",
             # Disable color

@@ -2,11 +2,15 @@ from cryptography.fernet import Fernet
 from pypass.app import PyPass
 from pypass.utils import *
 from pathlib import Path
+import argparse
 import toga
 import json
 import os
 
 os.environ["TOGA_BACKEND"] = "toga_dummy"
+parser = argparse.ArgumentParser()
+parser.add_argument("--api-key", type=str, help="Github API key")
+args_passed = parser.parse_args()
 
 PYPASS_SERVER_CODE_BRANCH = "dev-branch"
 PYPASS_SERVER_CODE_FOLDER = "pypass-server"
@@ -134,11 +138,11 @@ def test_copy_to_clipboard():
 def test_server():
     import requests
 
-    API_TOKEN = os.environ.get("API_TOKEN")
+    API_KEY = args_passed.api_key
 
-    print(API_TOKEN)
+    print(API_KEY)
 
-    response = requests.get(f"https://api.github.com/repos/{PYPASS_SERVER_CODE_PATH}/contents/{PYPASS_SERVER_CODE_FOLDER}?ref={PYPASS_SERVER_CODE_BRANCH}", headers={"Authorization": f"Bearer {API_TOKEN}"})
+    response = requests.get(f"https://api.github.com/repos/{PYPASS_SERVER_CODE_PATH}/contents/{PYPASS_SERVER_CODE_FOLDER}?ref={PYPASS_SERVER_CODE_BRANCH}", headers={"Authorization": f"Bearer {API_KEY}"})
     response.raise_for_status()
 
     api_data = response.json()

@@ -1,8 +1,6 @@
-name: CI
+name: Create App Artifacts
 on:
  pull_request:
-   branches:
-     - dev-branch
 
  push:
    branches:
@@ -24,9 +22,6 @@ jobs:
  ci:
    name: Test and Package
    runs-on: ${{ matrix.runs-on }}
-
-   env:
-     API_TOKEN: ${{ secrets.API_TOKEN }}
 
    strategy:
      fail-fast: false
@@ -108,20 +103,15 @@ jobs:
 
      - name: Test App
 
-       env:
-         API_TOKEN: ${{ secrets.API_TOKEN }}
-
        working-directory: ./pypass
        run: |
-         echo "$API_TOKEN"
          ${{ matrix.briefcase-run-prefix }} \
          briefcase run \
            ${{ matrix.platform || matrix.target }} \
            ${{ matrix.output-format }} \
-           --test --no-input --log \
+           --test --no-input --log -- --api-key=${{ secrets.API_KEY }}\
            ${{ matrix.briefcase-args }} \
            ${{ matrix.briefcase-run-args }}
-         echo "$API_TOKEN"
 
      - name: Package App
        working-directory: ./pypass
