@@ -73,15 +73,10 @@ jobs:
      - name: Checkout
        uses: actions/checkout@v4
 
-     - name: Setup Python
-       uses: actions/setup-python@v4
-       with:
-         python-version: "3.12"  # update with your targeted Python version
-
      - name: Install Briefcase
        run: |
-         python -m pip install -U pip setuptools wheel
-         python -m pip install briefcase
+         /usr/bin/python3 -m pip install -U pip setuptools wheel
+         /usr/bin/python3 -m pip install briefcase
 
      - name: Setup Environment
        working-directory: ./pypass
@@ -89,6 +84,9 @@ jobs:
          # Use GitHub's preinstalled JDK 17 for Android builds
          echo JAVA_HOME="${JAVA_HOME_17_X64:-$JAVA_HOME_17_arm64}" | tee -a ${GITHUB_ENV}
          ${{ matrix.pre-command }}
+
+     - name: Update briefcase tools
+       run: briefcase upgrade --no-input --log
 
      - name: Build App
        working-directory: ./pypass
