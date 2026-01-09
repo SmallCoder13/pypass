@@ -75,8 +75,8 @@ jobs:
 
      - name: Install Briefcase
        run: |
-         /usr/bin/python3 -m pip install -U pip setuptools wheel
-         /usr/bin/python3 -m pip install briefcase
+         python3 -m pip install -U pip setuptools wheel
+         python3 -m pip install briefcase
 
      - name: Setup Environment
        working-directory: ./pypass
