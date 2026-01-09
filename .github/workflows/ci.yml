@@ -86,6 +86,7 @@ jobs:
          ${{ matrix.pre-command }}
 
      - name: Update briefcase tools
+       working-directory: ./pypass
        run: briefcase upgrade --no-input --log
 
      - name: Build App
