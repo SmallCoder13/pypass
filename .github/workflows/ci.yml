@@ -40,7 +40,7 @@ jobs:
            platform: "Linux"
            output-format: "system"
            runs-on: "ubuntu-latest"
-           pre-command: "sudo apt -y install socat && sudo apt install libcairo2-dev libgirepository1.0-dev"
+           pre-command: "sudo apt -y install socat --fix-missing && sudo apt install libcairo2-dev libgirepository1.0-dev --fix-missing"
            briefcase-run-prefix: "xvfb-run"
            briefcase-args: "--target ubuntu:24.04"
 
@@ -48,7 +48,7 @@ jobs:
            platform: "Linux"
            output-format: "system"
            runs-on: "ubuntu-latest"
-           pre-command: "sudo apt -y install socat && sudo apt install libcairo2-dev libgirepository1.0-dev"
+           pre-command: "sudo apt -y install socat --fix-missing && sudo apt install libcairo2-dev libgirepository1.0-dev --fix-missing"
            briefcase-run-prefix: "xvfb-run"
            briefcase-args: "--target fedora:40"
 

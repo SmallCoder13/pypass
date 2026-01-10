@@ -112,7 +112,7 @@ def test_load_user_data():
             fp=passwords_file
         )
 
-    print(f"Data type from load_user_data: {type(load_user_data(Path(data_path, "passwords_file")))}")
+    print(f"Data type from load_user_data: {type(load_user_data(Path(data_path, 'passwords_file')))}")
 
     assert load_user_data(Path(data_path, "passwords_file")) == test_data
 
