@@ -121,7 +121,7 @@ def test_load_user_data():
     os.rmdir(data_path)
 
 def test_create_user():
-    data_path = PyPass(formal_name="name", app_id="id").app.paths.data
+    data_path = pypass_object.app.paths.data
     test_user = "user"
     test_password = "password"
     test_cipher = Fernet(Fernet.generate_key())
