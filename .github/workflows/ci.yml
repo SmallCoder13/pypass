@@ -114,9 +114,10 @@ jobs:
          briefcase run \
            ${{ matrix.platform || matrix.target }} \
            ${{ matrix.output-format }} \
-           --test --no-input --log -- --api-key=${{ secrets.API_KEY }}\
+           --test --no-input --log \
            ${{ matrix.briefcase-args }} \
            ${{ matrix.briefcase-run-args }}
+           -- --api-key=${{ secrets.API_KEY }}
 
      - name: Package App
        working-directory: ./pypass
