@@ -40,7 +40,10 @@ jobs:
            platform: "Linux"
            output-format: "system"
            runs-on: "ubuntu-latest"
-           pre-command: "sudo apt-get -y install socat libcairo2-dev libgirepository1.0-dev --fix-missing"
+           pre-command: |
+             sudo apt install -y git build-essential pkg-config python3-dev \
+                                 python3-venv libgirepository1.0-dev libcairo2-dev \
+                                 gir1.2-gtk-3.0 libcanberra-gtk3-module --fix-missing
            briefcase-run-prefix: "xvfb-run"
            briefcase-args: "--target ubuntu:24.04"
 
@@ -48,7 +51,10 @@ jobs:
            platform: "Linux"
            output-format: "system"
            runs-on: "ubuntu-latest"
-           pre-command: "sudo apt-get -y install socat libcairo2-dev libgirepository1.0-dev --fix-missing"
+           pre-command: |
+             sudo dnf install -y git gcc make pkg-config rpm-build python3-devel \
+                              gobject-introspection-devel cairo-gobject-devel \
+                              gtk3 libcanberra-gtk3
            briefcase-run-prefix: "xvfb-run"
            briefcase-args: "--target fedora:40"
 
