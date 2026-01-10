@@ -40,7 +40,7 @@ jobs:
            platform: "Linux"
            output-format: "system"
            runs-on: "ubuntu-latest"
-           pre-command: "sudo apt -y install socat"
+           pre-command: "sudo apt -y install socat && sudo apt install libcairo2-dev libgirepository1.0-dev"
            briefcase-run-prefix: "xvfb-run"
            briefcase-args: "--target ubuntu:24.04"
 
@@ -48,7 +48,7 @@ jobs:
            platform: "Linux"
            output-format: "system"
            runs-on: "ubuntu-latest"
-           pre-command: "sudo apt -y install socat"
+           pre-command: "sudo apt -y install socat && sudo apt install libcairo2-dev libgirepository1.0-dev"
            briefcase-run-prefix: "xvfb-run"
            briefcase-args: "--target fedora:40"
 
@@ -75,8 +75,8 @@ jobs:
 
      - name: Install Briefcase
        run: |
-         python3 -m pip install -U pip setuptools wheel
-         python3 -m pip install briefcase
+         python3 -m pip install -U pip setuptools wheel --break-system-packages
+         python3 -m pip install briefcase --break-system-packages
 
      - name: Setup Environment
        working-directory: ./pypass
