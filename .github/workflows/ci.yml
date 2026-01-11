@@ -79,10 +79,15 @@ jobs:
      - name: Checkout
        uses: actions/checkout@v4
 
+     - name: Setup Python
+       uses: actions/setup-python@v4
+       with:
+         python-version: "3.12"
+
      - name: Install Briefcase
        run: |
-         python3 -m pip install -U pip setuptools wheel --break-system-packages
-         python3 -m pip install briefcase --break-system-packages
+         python -m pip install -U pip setuptools wheel --break-system-packages
+         python -m pip install briefcase --break-system-packages
 
      - name: Setup Environment
        working-directory: ./pypass
