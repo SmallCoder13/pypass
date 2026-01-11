@@ -69,8 +69,7 @@ def test_load_env():
         env_object=os.environ
     ) == "Loaded environment"
 
-    os.unlink(os.path.join(pypass_object.app.paths.data, ".env"))
-    os.rmdir(pypass_object.app.paths.data)
+    Path(pypass_object.app.paths.data, ".env").unlink(missing_ok=True)
 
 def test_check_password():
     print("Testing check_password...")
@@ -105,9 +104,9 @@ def test_load_user_data():
     assert load_user_data(Path(data_path, "passwords_file")) == "Password file path doesn't exist"
 
     Path(data_path ,"passwords_file").write_text("")
-    assert load_user_data(os.path.join(data_path ,"passwords_file")) == "Invalid data saved"
+    assert load_user_data(Path(data_path ,"passwords_file")) == "Invalid data saved"
 
-    with open(os.path.join(data_path, "passwords_file"), mode="w") as passwords_file:
+    with open(Path(data_path, "passwords_file"), mode="w") as passwords_file:
         json.dump(
             obj=test_data,
             fp=passwords_file
@@ -117,8 +116,7 @@ def test_load_user_data():
 
     assert load_user_data(Path(data_path, "passwords_file")) == test_data
 
-    os.unlink(Path(data_path, "passwords_file"))
-    os.rmdir(data_path)
+    Path(data_path, "passwords_file").unlink(missing_ok=True)
 
 def test_create_user():
     data_path = pypass_object.app.paths.data
@@ -126,12 +124,11 @@ def test_create_user():
     test_password = "password"
     test_cipher = Fernet(Fernet.generate_key())
 
-    assert create_new_user(user_data_path=os.path.join(data_path, test_user), user=test_user, password=test_password, main_cipher=test_cipher) == "Successfully created new user"
-    assert create_new_user(user_data_path=os.path.join(data_path, test_user), user=test_user, password=test_password, main_cipher=test_cipher) == "User already exists"
+    assert create_new_user(user_data_path=Path(data_path, test_user), user=test_user, password=test_password, main_cipher=test_cipher) == "Successfully created new user"
+    assert create_new_user(user_data_path=Path(data_path, test_user), user=test_user, password=test_password, main_cipher=test_cipher) == "User already exists"
 
-    os.unlink(os.path.join(data_path, test_user, ".passwords.json"))
-    os.rmdir(os.path.join(data_path, test_user))
-    os.rmdir(data_path)
+    Path(data_path, test_user, ".passwords.json").unlink(missing_ok=True)
+    Path(data_path, test_user).rmdir()
 
 def test_copy_to_clipboard():
     assert copy_to_clipboard("Test text") == "Successfully copied to clipboard"
@@ -158,7 +155,7 @@ def test_server():
 
         try:
             for folder in file_path:
-                os.mkdir(folder)
+                Path(folder).mkdir(exist_ok=True)
 
         except FileExistsError:
             pass
@@ -166,8 +163,8 @@ def test_server():
         with open(file["path"], mode="w") as new_file:
             new_file.write(file_text)
 
-    assert os.path.exists("pypass-server") and os.path.exists("pypass-server/main.py") and os.path.exists("pypass-server/requirements.txt")
+    assert Path("pypass-server").exists() and Path("pypass-server", "main.py").exists() and Path("pypass-server", "requirements.txt").exists()
 
-    os.unlink(os.path.join("pypass-server", "requirements.txt"))
-    os.unlink(os.path.join("pypass-server", "main.py"))
-    os.rmdir("pypass-server")
+    Path("pypass-server", "requirements.txt").unlink(missing_ok=True)
+    Path("pypass-server", "main.py").unlink(missing_ok=True)
+    Path("pypass-server").rmdir()
