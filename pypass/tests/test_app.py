@@ -13,7 +13,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--api-key", type=str, help="Github API key")
 args_passed = parser.parse_args()
 
-pypass_object = PyPass(app_id="id" ,formal_name="name")
+pypass_object = PyPass(app_id="id", formal_name="name")
 pypass_object.app.paths.data.mkdir(parents=True, exist_ok=True)
 
 PYPASS_SERVER_CODE_BRANCH = "dev-branch"
