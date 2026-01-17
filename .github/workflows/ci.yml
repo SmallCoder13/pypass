@@ -135,18 +135,32 @@ jobs:
            ${{ matrix.briefcase-args }} \
            ${{ matrix.briefcase-package-args }}
 
+     - name: Prep Release Data
+       uses: SebRollen/toml-action@v1.2.0
+       id: read_toml
+       with:
+         file: "pypass/pyproject.toml"
+         field: "tool.briefcase.version"
+
      - name: Upload App
-       uses: actions/upload-artifact@v4
+       uses: ncipollo/release-action@v1
        with:
-         name: App-${{ matrix.target }}
-         path: pypass/dist
-         if-no-files-found: error
+         name: "PyPass Release v${{ steps.read_toml.outputs.value }}"
+         draft: true
+         artifacts: "pypass/dist/"
+         bodyFile: "pypass/CHANGELOG"
+         artifactErrorsFailBuild: true
 
-     - name: Upload Log
-
+     - name: Prep Logs and Email
        if: failure()
-       uses: actions/upload-artifact@v4
+       uses: vimtor/action-zip@v1.2
        with:
-         retention-days: 1
-         name: Log-Failure-${{ matrix.target }}
-         path: pypass/logs/*
+         files: pypass/logs/*
+         dest: logs.zip
+
+       uses: cinotify/github-action@main
+       with:
+         to: "SpyridonCoryell@protonmail.com"
+         subject: "PyPass CI ${{ github.run_number }} Workflow log"
+         body: "Github CI workflow ${{ github.run_number }} for PyPass failed. Attached are all available logs."
+         attachment: "logs.zip"
