@@ -164,9 +164,9 @@ jobs:
        uses: ncipollo/release-action@v1
        with:
          tag: "v${{ steps.pypass_version.value }}"
-          draft: true
-          bodyFile: "pypass/CHANGELOG"
-          artifacts: "pypass/dist"
+         draft: true
+         bodyFile: "pypass/CHANGELOG"
+         artifacts: "pypass/dist"
        
      - name: Prep Logs
        id: prep_logs
