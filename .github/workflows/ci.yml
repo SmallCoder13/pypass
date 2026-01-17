@@ -142,12 +142,13 @@ jobs:
          file: "pypass/pyproject.toml"
          field: "tool.briefcase.version"
 
-     - name: Ensure Latest tag exists
+     - name: Check if latest tag exists
        uses: mukunku/tag-exists-action@v1.7.0
        id: latest_exists
        with: 
          tag: 'latest'
 
+     - name: Create latest tag, if it doesn't exist
        if: ${{ steps.latest_exists.outputs.value }} == 'false'
        uses: makethenetgo/actions-create-tag@v1
        with:
