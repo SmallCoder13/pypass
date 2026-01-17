@@ -137,15 +137,36 @@ jobs:
 
      - name: Prep Release Data
        uses: SebRollen/toml-action@v1.2.0
-       id: read_toml
+       id: pypass_version
        with:
          file: "pypass/pyproject.toml"
          field: "tool.briefcase.version"
 
-     - name: Upload App
+     - name: Ensure Latest tag exists
+       uses: rickstaa/action-create-tag@v1
+       id: "latest_tag"
+       with:
+         tag: "latest"
+         tag_exists_error: false
+         message: "Latest Release"
+         gpg_private_key: ${{ secrets.TAG_PRIVATE_KEY }}
+         gpg_passphrase: ${{ secrets.TAG_PASSPHRASE }}
+
+     - name: Create Tag for new Release
+       uses: rickstaa/action-create-tag@v1
+       id: "release_tag"
+       with:
+         tag: ${{ steps.pypass_version.outputs.value }}
+         tag_exists_error: true
+         message: "PyPass release ${{ steps.pypass_version.outputs.value }}"
+         gpg_private_key: ${{ secrets.TAG_PRIVATE_KEY }}
+         gpg_passphrase: ${{ secrets.TAG_PASSPHRASE }}
+
+     - name: Create App Release
        uses: ncipollo/release-action@v1
        with:
-         name: "PyPass Release v${{ steps.read_toml.outputs.value }}"
+         tag: ${{ steps.pypass_version.outputs.value }}
+         name: "PyPass Release v${{ steps.pypass_version.outputs.value }}"
          draft: true
          artifacts: "pypass/dist/"
          bodyFile: "pypass/CHANGELOG"
@@ -161,6 +182,7 @@ jobs:
 
 
      - name: Email Logs
+       run: echo ${{ steps.prep_logs.outcome }}
        if: steps.prep_logs.outcome == 'success'
        uses: cinotify/github-action@main
        with:
