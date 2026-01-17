@@ -136,7 +136,6 @@ jobs:
            ${{ matrix.briefcase-package-args }}
 
      - name: Prep Release Data
-       if: matrix.target == 'Android'
        uses: SebRollen/toml-action@v1.2.0
        id: pypass_version
        with:
@@ -144,41 +143,33 @@ jobs:
          field: "tool.briefcase.version"
 
      - name: Ensure Latest tag exists
-       if: matrix.target == 'Android'
-       uses: rickstaa/action-create-tag@v1
-       id: "latest_tag"
+       uses: mukunku/tag-exists-action@v1.7.0
+       id: latest_exists
+       with: 
+         tag: 'latest'
+
+       if: ${{ steps.latest_exists.outputs.value }} == 'false'
+       uses: makethenetgo/actions-create-tag@v1
        with:
-         tag: "latest"
-         tag_exists_error: false
-         message: "Latest Release"
-         gpg_private_key: ${{ secrets.TAG_PRIVATE_KEY }}
-         gpg_passphrase: ${{ secrets.TAG_PASSPHRASE }}
+         tag_name: "latest"
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
      - name: Create Tag for new Release
-       if: matrix.target == 'Android'
-       uses: rickstaa/action-create-tag@v1
-       id: "release_tag"
+       uses: makethenetgo/actions-create-tag@v1
        with:
-         tag: ${{ steps.pypass_version.outputs.value }}
-         tag_exists_error: true
-         message: "PyPass release ${{ steps.pypass_version.outputs.value }}"
-         gpg_private_key: ${{ secrets.TAG_PRIVATE_KEY }}
-         gpg_passphrase: ${{ secrets.TAG_PASSPHRASE }}
+         tag_name: "v{{ steps.pypass_version.value }}"
 
-     - name: Create App Release
-       if: matrix.target == 'Android'
+     - name: Create New PyPass Release
        uses: ncipollo/release-action@v1
        with:
-         tag: ${{ steps.pypass_version.outputs.value }}
-         name: "PyPass Release v${{ steps.pypass_version.outputs.value }}"
-         draft: true
-         artifacts: "pypass/dist/"
-         bodyFile: "pypass/CHANGELOG"
-         artifactErrorsFailBuild: true
-
+         tag: "v${{ steps.pypass_version.value }}"
+          draft: true
+          bodyFile: "pypass/CHANGELOG"
+          artifacts: "pypass/dist"
+       
      - name: Prep Logs
        id: prep_logs
-       if: failure() && matrix.target == 'Android'
+       if: failure()
        uses: vimtor/action-zip@v1.2
        with:
          files: pypass/logs/*
@@ -186,7 +177,7 @@ jobs:
 
 
      - name: Email Logs
-       if: failure() && matrix.target == 'Android'
+       if: failure()
        uses: cinotify/github-action@main
        with:
          to: "SpyridonCoryell@protonmail.com"
