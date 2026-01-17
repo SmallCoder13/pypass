@@ -20,9 +20,10 @@ defaults:
 
 jobs:
 
- permissions:
-   contents: write
- ci:
+  build:
+    permissions:
+      contents: write
+  ci:
    name: Test and Package
    runs-on: ${{ matrix.runs-on }}
 
