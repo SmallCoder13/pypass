@@ -178,7 +178,7 @@ jobs:
 
      - name: Prep Logs
        id: prep_logs
-       if: failure() and matrix.target == 'Android'
+       if: failure() && matrix.target == 'Android'
        uses: vimtor/action-zip@v1.2
        with:
          files: pypass/logs/*
@@ -186,7 +186,7 @@ jobs:
 
 
      - name: Email Logs
-       if: failure() and matrix.target == 'Android'
+       if: failure() && matrix.target == 'Android'
        uses: cinotify/github-action@main
        with:
          to: "SpyridonCoryell@protonmail.com"
