@@ -136,7 +136,7 @@ jobs:
            ${{ matrix.briefcase-package-args }}
 
      - name: Prep Release Data
-       if: matrix.target == "Android"
+       if: matrix.target == 'Android'
        uses: SebRollen/toml-action@v1.2.0
        id: pypass_version
        with:
@@ -144,7 +144,7 @@ jobs:
          field: "tool.briefcase.version"
 
      - name: Ensure Latest tag exists
-       if: matrix.target == "Android"
+       if: matrix.target == 'Android'
        uses: rickstaa/action-create-tag@v1
        id: "latest_tag"
        with:
@@ -155,7 +155,7 @@ jobs:
          gpg_passphrase: ${{ secrets.TAG_PASSPHRASE }}
 
      - name: Create Tag for new Release
-       if: matrix.target == "Android"
+       if: matrix.target == 'Android'
        uses: rickstaa/action-create-tag@v1
        id: "release_tag"
        with:
@@ -166,7 +166,7 @@ jobs:
          gpg_passphrase: ${{ secrets.TAG_PASSPHRASE }}
 
      - name: Create App Release
-       if: matrix.target == "Android"
+       if: matrix.target == 'Android'
        uses: ncipollo/release-action@v1
        with:
          tag: ${{ steps.pypass_version.outputs.value }}
@@ -178,7 +178,7 @@ jobs:
 
      - name: Prep Logs
        id: prep_logs
-       if: failure() and matrix.target == "Android"
+       if: failure() and matrix.target == 'Android'
        uses: vimtor/action-zip@v1.2
        with:
          files: pypass/logs/*
@@ -186,7 +186,7 @@ jobs:
 
 
      - name: Email Logs
-       if: failure() and matrix.target == "Android"
+       if: failure() and matrix.target == 'Android'
        uses: cinotify/github-action@main
        with:
          to: "SpyridonCoryell@protonmail.com"
