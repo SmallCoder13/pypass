@@ -182,8 +182,7 @@ jobs:
 
 
      - name: Email Logs
-       run: echo ${{ steps.prep_logs.outcome }}
-       if: steps.prep_logs.outcome == 'success'
+       if: failure()
        uses: cinotify/github-action@main
        with:
          to: "SpyridonCoryell@protonmail.com"
