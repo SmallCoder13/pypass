@@ -158,6 +158,7 @@ jobs:
        uses: makethenetgo/actions-create-tag@v1
        with:
          tag_name: "v{{ steps.pypass_version.value }}"
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
      - name: Create New PyPass Release
        uses: ncipollo/release-action@v1
