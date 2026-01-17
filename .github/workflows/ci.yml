@@ -151,13 +151,17 @@ jobs:
          bodyFile: "pypass/CHANGELOG"
          artifactErrorsFailBuild: true
 
-     - name: Prep Logs and Email
+     - name: Prep Logs
+       id: prep_logs
        if: failure()
        uses: vimtor/action-zip@v1.2
        with:
          files: pypass/logs/*
          dest: logs.zip
 
+
+     - name: Email Logs
+       if: steps.prep_logs.outcome == 'success'
        uses: cinotify/github-action@main
        with:
          to: "SpyridonCoryell@protonmail.com"
