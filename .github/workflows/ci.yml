@@ -19,10 +19,6 @@ defaults:
    shell: bash
 
 jobs:
-
-  build:
-    permissions:
-      contents: write
   ci:
    name: Test and Package
    runs-on: ${{ matrix.runs-on }}
