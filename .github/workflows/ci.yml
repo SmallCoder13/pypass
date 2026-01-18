@@ -142,7 +142,15 @@ jobs:
          file: "pypass/pyproject.toml"
          field: "tool.briefcase.version"
 
+     - name: Check if release tag exists
+       uses: bbonkr/git-tag-check-action@v1
+       id: release_tag
+       with:
+         tag: v${{ steps.pypass_version.value }}
+         github_token: ${{ secrets.GITHUB_TOKEN }}
+
      - name: Create Tag for new Release
+       if: ${{ steps.release_tag.outputs.tag }} == ''
        uses: makethenetgo/actions-create-tag@v1
        with:
          tag_name: "v${{ steps.pypass_version.value }}"
