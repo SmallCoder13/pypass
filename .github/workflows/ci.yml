@@ -149,7 +149,7 @@ jobs:
          tag: 'latest'
 
      - name: Create latest tag, if it doesn't exist
-       if: ${{ steps.latest_exists.outputs.value }} == 'false'
+       if: ${{ steps.latest_exists.outputs.value }} == 'true'
        uses: makethenetgo/actions-create-tag@v1
        with:
          tag_name: "latest"
