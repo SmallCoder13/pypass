@@ -146,11 +146,11 @@ jobs:
        uses: bbonkr/git-tag-check-action@v1
        id: release_tag
        with:
-         tag: v${{ steps.pypass_version.value }}
+         tag: 'v${{ steps.pypass_version.value }}'
          github_token: ${{ secrets.GITHUB_TOKEN }}
 
      - name: Create Tag for new Release
-       if: ${{ steps.release_tag.outputs.tag }} == ''
+       if: steps.release_tag.outputs.tag == ''
        uses: makethenetgo/actions-create-tag@v1
        with:
          tag_name: "v${{ steps.pypass_version.value }}"
@@ -162,7 +162,7 @@ jobs:
          tag: "v${{ steps.pypass_version.value }}"
          draft: true
          bodyFile: "pypass/CHANGELOG"
-         artifacts: "pypass/dist"
+         artifacts: "pypass/dist/*"
        
      - name: Prep Logs
        id: prep_logs
