@@ -163,6 +163,7 @@ jobs:
          draft: true
          bodyFile: "pypass/CHANGELOG"
          artifacts: "pypass/dist/*"
+         allowUpdates: true
        
      - name: Prep Logs
        id: prep_logs
