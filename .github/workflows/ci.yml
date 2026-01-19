@@ -146,20 +146,20 @@ jobs:
        uses: bbonkr/git-tag-check-action@v1
        id: release_tag
        with:
-         tag: 'v${{ steps.pypass_version.value }}'
+         tag: 'v${{ steps.pypass_version.outputs.value }}'
          github_token: ${{ secrets.GITHUB_TOKEN }}
 
      - name: Create Tag for new Release
        if: steps.release_tag.outputs.tag == ''
        uses: makethenetgo/actions-create-tag@v1
        with:
-         tag_name: "v${{ steps.pypass_version.value }}"
+         tag_name: "v${{ steps.pypass_version.outputs.value }}"
          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
      - name: Create New PyPass Release
        uses: ncipollo/release-action@v1
        with:
-         tag: "v${{ steps.pypass_version.value }}"
+         tag: "v${{ steps.pypass_version.outputs.value }}"
          draft: true
          bodyFile: "pypass/CHANGELOG"
          artifacts: "pypass/dist/*"
