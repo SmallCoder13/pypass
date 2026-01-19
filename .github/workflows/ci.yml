@@ -1,10 +1,8 @@
 name: Create App Artifacts
 on:
  pull_request:
-
- push:
    branches:
-     - dev-branch
+     - main
 
 # Cancel active CI runs for a PR before starting another run
 concurrency:
