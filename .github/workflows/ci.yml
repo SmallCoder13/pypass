@@ -1,10 +1,8 @@
 name: Create App Artifacts
 on:
  pull_request:
-
- push:
    branches:
-     - dev-branch
+     - main
 
 # Cancel active CI runs for a PR before starting another run
 concurrency:
@@ -19,7 +17,7 @@ defaults:
    shell: bash
 
 jobs:
- ci:
+  ci:
    name: Test and Package
    runs-on: ${{ matrix.runs-on }}
 
@@ -142,36 +140,29 @@ jobs:
          file: "pypass/pyproject.toml"
          field: "tool.briefcase.version"
 
-     - name: Ensure Latest tag exists
-       uses: rickstaa/action-create-tag@v1
-       id: "latest_tag"
+     - name: Check if release tag exists
+       uses: bbonkr/git-tag-check-action@v1
+       id: release_tag
        with:
-         tag: "latest"
-         tag_exists_error: false
-         message: "Latest Release"
-         gpg_private_key: ${{ secrets.TAG_PRIVATE_KEY }}
-         gpg_passphrase: ${{ secrets.TAG_PASSPHRASE }}
+         tag: 'v${{ steps.pypass_version.outputs.value }}'
+         github_token: ${{ secrets.GITHUB_TOKEN }}
 
      - name: Create Tag for new Release
-       uses: rickstaa/action-create-tag@v1
-       id: "release_tag"
+       if: steps.release_tag.outputs.tag == ''
+       uses: makethenetgo/actions-create-tag@v1
        with:
-         tag: ${{ steps.pypass_version.outputs.value }}
-         tag_exists_error: true
-         message: "PyPass release ${{ steps.pypass_version.outputs.value }}"
-         gpg_private_key: ${{ secrets.TAG_PRIVATE_KEY }}
-         gpg_passphrase: ${{ secrets.TAG_PASSPHRASE }}
+         tag_name: "v${{ steps.pypass_version.outputs.value }}"
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-     - name: Create App Release
+     - name: Create New PyPass Release
        uses: ncipollo/release-action@v1
        with:
-         tag: ${{ steps.pypass_version.outputs.value }}
-         name: "PyPass Release v${{ steps.pypass_version.outputs.value }}"
+         tag: "v${{ steps.pypass_version.outputs.value }}"
          draft: true
-         artifacts: "pypass/dist/"
          bodyFile: "pypass/CHANGELOG"
-         artifactErrorsFailBuild: true
-
+         artifacts: "pypass/dist/*"
+         allowUpdates: true
+       
      - name: Prep Logs
        id: prep_logs
        if: failure()
