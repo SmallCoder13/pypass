@@ -131,14 +131,22 @@ def test_create_user():
     Path(data_path, test_user).rmdir()
 
 def test_copy_to_clipboard():
+    toga.App.app.main_loop()
+
+    if toga.platform.current_platform == "android":
+        from org.beeware.android import MainActivity
+
+        setattr(toga.App.app._impl, "native", MainActivity.singletonThis)
+
     assert copy_to_clipboard("Test text") == "Successfully copied to clipboard"
 
 def test_server():
+    import subprocess
     import requests
+    import shutil
+    import sys
 
     API_KEY = args_passed.api_key
-
-    print(API_KEY)
 
     response = requests.get(f"https://api.github.com/repos/{PYPASS_SERVER_CODE_PATH}/contents/{PYPASS_SERVER_CODE_FOLDER}?ref={PYPASS_SERVER_CODE_BRANCH}", headers={"Authorization": f"Bearer {API_KEY}"})
     response.raise_for_status()
@@ -153,18 +161,30 @@ def test_server():
         file_path = file["path"].split("/")
         del file_path[-1]
 
-        try:
-            for folder in file_path:
+        for folder in file_path:
+            try:
                 Path(folder).mkdir(exist_ok=True)
 
-        except FileExistsError:
-            pass
+            except FileExistsError:
+                continue
 
         with open(file["path"], mode="w") as new_file:
             new_file.write(file_text)
 
-    assert Path("pypass-server").exists() and Path("pypass-server", "main.py").exists() and Path("pypass-server", "requirements.txt").exists()
+    shutil.move(Path("pypass-server"), Path("pypass_server"))
+    # Path("pypass_server", "__init__.py").write_text("")
 
-    Path("pypass-server", "requirements.txt").unlink(missing_ok=True)
-    Path("pypass-server", "main.py").unlink(missing_ok=True)
-    Path("pypass-server").rmdir()
+    if toga.platform.current_platform == "windows":
+        install_command = f"{Path(sys.executable)} -m pip install --upgrade pip -r {Path('pypass_server', 'requirements.txt')}"
+
+    else:
+        install_command = f"{Path(sys.executable)} -m pip install --upgrade pip -r {Path('pypass_server', 'requirements.txt')}"
+
+    subprocess.Popen(install_command.split(" ")).wait()
+    assert Path("pypass_server").exists() and Path("pypass_server", "main.py").exists() and Path("pypass_server", "requirements.txt").exists()
+
+    from pypass_server.main import start_server
+
+    Path("pypass_server", "requirements.txt").unlink(missing_ok=True)
+    Path("pypass_server", "main.py").unlink(missing_ok=True)
+    Path("pypass_server").rmdir()

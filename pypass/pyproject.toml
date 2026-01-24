@@ -46,8 +46,9 @@ requires = ["json_repair", "cryptography", "uvicorn", "fastapi", "httpx", "psuti
 ]
 test_requires = [
     "pytest",
-    "requests",
     "pillow",
+    "shutil",
+    "requests",
     "toga-dummy"
 ]
 

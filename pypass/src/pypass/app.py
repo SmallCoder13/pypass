@@ -77,9 +77,10 @@ class PyPass(toga.App):
             )
         )
 
-        if toga.platform.current_platform == "android":
-            from org.beeware.android import MainActivity
-            self._impl.native = MainActivity.singletonThis
+        # if toga.platform.current_platform == "android":
+        #     from org.beeware.android import MainActivity
+        #
+        #     self._impl.native = MainActivity.singletonThis
 
         self.error_title = "Oh No!"
         self.success_title = "Yay!"
