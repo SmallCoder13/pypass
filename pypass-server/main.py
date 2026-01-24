@@ -30,6 +30,73 @@ import netifaces
 import json_repair
 from cryptography.fernet import Fernet
 
+def start_server():
+    global stop_event
+
+    if not os.path.exists("logs"):
+        os.mkdir("logs")
+
+    logging.basicConfig(
+        level=logging.DEBUG,
+        filename=f"logs/{datetime.date.today().strftime('%m-%d-%Y')}.log",
+        format="%(asctime)s: %(levelname)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M"
+    )
+    logger = logging.getLogger(__name__)
+
+    stop_event = threading.Event()
+
+    schedule.every().monday.at("00:00")
+    schedule_thread = threading.Thread(target=start_scheduled_tasks)
+    schedule_thread.start()
+
+    logger.info("Scheduler started")
+
+
+    try:
+        server_data = get_connection_data()
+
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.bind(server_data)
+        server.listen()
+
+        logger.info("Server started and listening")
+
+        print(f"Listening on address {server_data[0]} port {server_data[1]}...")
+
+        while not stop_event.is_set():
+
+            client, client_addr = server.accept()
+            threading.Thread(target=Client, kwargs={"user_client": client, "client_address": client_addr}).start()
+
+    except Exception as e:
+        print(traceback.format_exc())
+
+        logger.error(f"Error occurred: {e}. Shutting down")
+        print("Exception, shutting down")
+        stop_event.set()
+        schedule_thread.join()
+
+        if client_connected:
+            logger.info("Client(s) still connected, closing connection")
+            print("Client(s) connected, closing connection")
+            client.close()
+
+            client_connected = False
+
+    except KeyboardInterrupt:
+        logger.info("Keyboard interrupt received, shutting down")
+        print("Keyboard interrupt, shutting down")
+        stop_event.set()
+        schedule_thread.join()
+
+        if client_connected:
+            logger.info("Client(s) still connected, closing connection")
+            print("Client(s) connected, closing connection")
+            client.close()
+
+            client_connected = False
+
 def get_connection_data():
     if os.path.exists("data/data.json"):
         connection_data = tuple(json_repair.from_file("data/data.json"))
@@ -489,66 +556,4 @@ class Client:
 client_connected = False
 
 if __name__ == "__main__":
-    if not os.path.exists("logs"):
-        os.mkdir("logs")
-
-    logging.basicConfig(
-        level=logging.DEBUG,
-        filename=f"logs/{datetime.date.today().strftime('%m-%d-%Y')}.log",
-        format="%(asctime)s: %(levelname)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M"
-    )
-    logger = logging.getLogger(__name__)
-
-    stop_event = threading.Event()
-
-    schedule.every().monday.at("00:00")
-    schedule_thread = threading.Thread(target=start_scheduled_tasks)
-    schedule_thread.start()
-
-    logger.info("Scheduler started")
-
-
-    try:
-        server_data = get_connection_data()
-
-        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server.bind(server_data)
-        server.listen()
-
-        logger.info("Server started and listening")
-
-        print(f"Listening on address {server_data[0]} port {server_data[1]}...")
-
-        while not stop_event.is_set():
-
-            client, client_addr = server.accept()
-            threading.Thread(target=Client, kwargs={"user_client": client, "client_address": client_addr}).start()
-
-    except Exception as e:
-        print(traceback.format_exc())
-
-        logger.error(f"Error occurred: {e}. Shutting down")
-        print("Exception, shutting down")
-        stop_event.set()
-        schedule_thread.join()
-
-        if client_connected:
-            logger.info("Client(s) still connected, closing connection")
-            print("Client(s) connected, closing connection")
-            client.close()
-
-            client_connected = False
-
-    except KeyboardInterrupt:
-        logger.info("Keyboard interrupt received, shutting down")
-        print("Keyboard interrupt, shutting down")
-        stop_event.set()
-        schedule_thread.join()
-
-        if client_connected:
-            logger.info("Client(s) still connected, closing connection")
-            print("Client(s) connected, closing connection")
-            client.close()
-
-            client_connected = False 
+    start_server()
