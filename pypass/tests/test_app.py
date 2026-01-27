@@ -172,10 +172,10 @@ def test_server():
             new_file.write(file_text)
 
     shutil.move(Path("pypass-server"), Path("pypass_server"))
-    # Path("pypass_server", "__init__.py").write_text("")
+    Path("pypass_server", "__init__.py").write_text("")
 
     if toga.platform.current_platform == "windows":
-        install_command = f"{Path(sys.executable)} -m pip install --upgrade pip -r {Path('pypass_server', 'requirements.txt')}"
+        install_command = f"{Path(sys.executable)} -m pip install --upgrade pip -r {Path('tests', 'pypass_server', 'requirements.txt')}"
 
     else:
         install_command = f"{Path(sys.executable)} -m pip install --upgrade pip -r {Path('pypass_server', 'requirements.txt')}"
@@ -183,8 +183,7 @@ def test_server():
     subprocess.Popen(install_command.split(" ")).wait()
     assert Path("pypass_server").exists() and Path("pypass_server", "main.py").exists() and Path("pypass_server", "requirements.txt").exists()
 
-    from pypass_server.main import start_server
 
-    Path("pypass_server", "requirements.txt").unlink(missing_ok=True)
-    Path("pypass_server", "main.py").unlink(missing_ok=True)
-    Path("pypass_server").rmdir()
+    from pypass_server import start_server
+
+    shutil.rmtree(Path("pypass_server"))

@@ -15,9 +15,9 @@ pypass/src/pypass.dist-info/
 pypass/src/pypass/__pycache__/
 pypass/src/pypass/wordlist.json
 
-pypass-server/.venv/
-pypass-server/.idea/
-pypass-server/venv/
-pypass-server/data/
-pypass-server/logs/
-pypass-server/test_new_encryption.py
+pypass_server/.venv/
+pypass_server/.idea/
+pypass_server/venv/
+pypass_server/data/
+pypass_server/logs/
+pypass_server/test_new_encryption.py
