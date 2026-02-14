@@ -3,7 +3,7 @@
 project_name = "PyPass"
 bundle = "com.coryellcottage"
 version = "1.0.0"
-url = "https://coryellcottage.com/pypass"
+url = "https://coryellcottage.github.io/pypass/"
 license.file = "LICENSE"
 author = "Spyridon Coryell"
 author_email = "SpyridonCoryell@protonmail.com"
@@ -42,13 +42,16 @@ test_sources = [
     "tests",
 ]
 
-requires = ["json_repair", "cryptography", "uvicorn", "fastapi", "httpx", "psutil"
+requires = ["json_repair", "cryptography", "uvicorn", "fastapi", "httpx", "psutil", "crypto"
 ]
 test_requires = [
     "pytest",
     "pillow",
     "requests",
-    "toga-dummy"
+    "netifaces",
+    "toga-dummy",
+    "pytest-asyncio",
+    "git+https://github.com/coryellcottage/pypass_server.git"
 ]
 
 [tool.briefcase.app.pypass.macOS]
@@ -226,3 +229,6 @@ requires = [
 ]
 style_framework = "Shoelace v2.3"
 
+#Pytest Config
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"

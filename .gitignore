@@ -1,4 +1,3 @@
-data/
 .idea/
 .venv/
 
@@ -14,10 +13,3 @@ pypass/src/pypass/test.py
 pypass/src/pypass.dist-info/
 pypass/src/pypass/__pycache__/
 pypass/src/pypass/wordlist.json
-
-pypass_server/.venv/
-pypass_server/.idea/
-pypass_server/venv/
-pypass_server/data/
-pypass_server/logs/
-pypass_server/test_new_encryption.py

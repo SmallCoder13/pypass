@@ -3,5 +3,9 @@
 ## 1.0.0 (12 Dec 2025)
 
 * Add utils.py file, and start simplifying app.py file
-* Add unit tests
+* Begin adding unit tests
 * Add Delete Service functionality
+* Separate pypass and pypass_server code
+
+## 1.0.0 (9 Feb 2026)
+* Update project URL for PyPass

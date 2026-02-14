@@ -2,23 +2,18 @@ from cryptography.fernet import Fernet
 from pypass.app import PyPass
 from pypass.utils import *
 from pathlib import Path
-import argparse
+import shutil
+import pytest
 import toga
 import json
 import os
 
-os.environ["TOGA_BACKEND"] = "toga_dummy"
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--api-key", type=str, help="Github API key")
-args_passed = parser.parse_args()
+os.environ["TOGA_BACKEND"] = "toga_dummy"
+pytest_plugins = ("pytest_asyncio",)
 
 pypass_object = PyPass(app_id="id", formal_name="name")
 pypass_object.app.paths.data.mkdir(parents=True, exist_ok=True)
-
-PYPASS_SERVER_CODE_BRANCH = "dev-branch"
-PYPASS_SERVER_CODE_FOLDER = "pypass-server"
-PYPASS_SERVER_CODE_PATH = "coryellcottage/pypass"
 
 def test_recover_key():
     print("Testing recover_key...")
@@ -140,50 +135,85 @@ def test_copy_to_clipboard():
 
     assert copy_to_clipboard("Test text") == "Successfully copied to clipboard"
 
-def test_server():
-    import subprocess
-    import requests
-    import shutil
-    import sys
+@pytest.mark.asyncio
+async def test_receive_all():
+    import time
+    import socket
+    import asyncio
+    import netifaces
+    from pypass_server import start_server, stop_server
 
-    API_KEY = args_passed.api_key
+    test_main_key = Fernet.generate_key()
+    interface = netifaces.interfaces()[0]
+    server_result = start_server(server_interface=interface, server_port=9000)
 
-    response = requests.get(f"https://api.github.com/repos/{PYPASS_SERVER_CODE_PATH}/contents/{PYPASS_SERVER_CODE_FOLDER}?ref={PYPASS_SERVER_CODE_BRANCH}", headers={"Authorization": f"Bearer {API_KEY}"})
-    response.raise_for_status()
+    print(server_result)
+    print(f"Address being returned: {netifaces.ifaddresses(interface)[netifaces.AF_INET][0]["addr"]}")
 
-    api_data = response.json()
+    await asyncio.sleep(1)
 
-    for file in api_data:
-        response = requests.get(file["download_url"])
-        response.raise_for_status()
+    data_subfolders = os.listdir("./data")
+    del data_subfolders[data_subfolders.index("data.json")]
 
-        file_text = response.text
-        file_path = file["path"].split("/")
-        del file_path[-1]
+    print(data_subfolders)
+    assert len(data_subfolders) == 0
 
-        for folder in file_path:
-            try:
-                Path(folder).mkdir(exist_ok=True)
+    assert server_result["server_running"] == True
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.connect((netifaces.ifaddresses(interface)[netifaces.AF_INET][0]["addr"], 9000))
 
-            except FileExistsError:
-                continue
+    await asyncio.to_thread(server.sendall, b"test_user")
+    server.sendall(test_main_key)
+    server_key = Fernet(test_main_key).decrypt(server.recv(1024))
 
-        with open(file["path"], mode="w") as new_file:
-            new_file.write(file_text)
+    for_server = {
+        "test": {
+            "test": {
+                "password": "test",
+                "key": server_key.decode()
+            }
+        }
+    }
 
-    shutil.move(Path("pypass-server"), Path("pypass_server"))
-    Path("pypass_server", "__init__.py").write_text("")
+    encrypted_for_server_string: bytes = Fernet(server_key).encrypt(
+        Fernet(test_main_key).encrypt(
+            json.dumps(for_server).encode()
+        )
+    )
 
-    if toga.platform.current_platform == "windows":
-        install_command = f"{Path(sys.executable)} -m pip install --upgrade pip -r {Path('tests', 'pypass_server', 'requirements.txt')}"
+    await asyncio.to_thread(server.sendall, encrypted_for_server_string)
+    await asyncio.to_thread(server.sendall, Fernet(server_key).encrypt(Fernet(test_main_key).encrypt(b"REPLACE")))
 
-    else:
-        install_command = f"{Path(sys.executable)} -m pip install --upgrade pip -r {Path('pypass_server', 'requirements.txt')}"
+    server_response = await asyncio.to_thread(server.recv, 1024)
 
-    subprocess.Popen(install_command.split(" ")).wait()
-    assert Path("pypass_server").exists() and Path("pypass_server", "main.py").exists() and Path("pypass_server", "requirements.txt").exists()
+    assert server_response == b"Successfully updated data"
 
 
-    from pypass_server import start_server
+    server.sendall(
+        Fernet(server_key).encrypt(Fernet(test_main_key).encrypt(b"DOWNLOAD_DATA"))
+    )
 
-    shutil.rmtree(Path("pypass_server"))
+    downloaded_data = await asyncio.to_thread(
+        receive_all,
+        server_key=server_key,
+        server_connection=server,
+        main_cipher=Fernet(test_main_key)
+    )
+
+    print(f"Data from server: {downloaded_data}")
+
+    assert json.loads(downloaded_data) == for_server
+
+    try:
+        time.sleep(2)
+        await asyncio.to_thread(
+            server.sendall,
+            Fernet(server_key).encrypt(Fernet(test_main_key).encrypt(b"DONE"))
+        )
+        await asyncio.to_thread(stop_server)
+        await asyncio.to_thread(server.close)
+
+    except ConnectionResetError:
+        pass
+
+    shutil.rmtree("./data")

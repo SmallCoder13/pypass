@@ -55,6 +55,53 @@ if toga.platform.current_platform.lower() == "android" or "window" in toga.platf
 else:
     import pyperclip
 
+if toga.platform.current_platform == "android":
+    from java import jbyte
+    from java.util import Base64
+    from java.security import KeyStore
+    from javax.crypto import Cipher, KeyGenerator
+    from android.security.keystore import KeyProperties, KeyGenParameterSpec
+
+    key_generator = KeyGenerator.getInstance(
+        KeyProperties.KEY_ALGORITHM_AES,
+        "AndroidKeyStore"
+    )
+
+    key_generator.init(
+        KeyGenParameterSpec.Builder(
+            "PYPASS_MAIN_KEY",
+            KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT
+        )
+        .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+        .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+        .setUserAuthenticationRequired(False)
+        .build()
+    )
+
+    key = key_generator.generateKey()
+
+    key_store_instance = KeyStore.getInstance("AndroidKeyStore")
+    key_store_instance.load(None)
+
+    alias_key = key_store_instance.getKey("PYPASS_MAIN_KEY", None)
+
+    print(f"alias_key is of type: {type(alias_key)}")
+    print(f"alias_key is set to: {alias_key}")
+
+    cipher_instance = Cipher.getInstance("AES/GCM/NoPadding")
+    cipher_instance.init(Cipher.ENCRYPT_MODE, alias_key)
+    cipher_iv = cipher_instance.getIV()
+    encrypted_text = cipher_instance.doFinal("Secret Text".encode())
+    encrypted_base64 = Base64.getEncoder().encodeToString(encrypted_text)
+    iv_base64 = Base64.getEncoder().encodeToString(cipher_iv)
+
+    # IMPORTANT NOTE: Use encrypted_base64 and iv_base64, when decrypting
+
+    from Crypto.Cipher import AES
+
+    aes_cipher = AES.new(key=alias_key, mode=AES.MODE_GCM, nonce=iv_base64)
+    aes_cipher.decrypt(encrypted_base64)
+
 class PyPass(toga.App):
     # --------------------- App related functions ---------------------#
     async def on_running(self):
