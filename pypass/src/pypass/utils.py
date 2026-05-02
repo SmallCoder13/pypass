@@ -2,6 +2,7 @@ import os
 import toga
 import json
 import json_repair
+from pathlib import Path
 from cryptography.fernet import Fernet, InvalidToken
 
 if toga.platform.current_platform.lower() == "android" or "window" in toga.platform.current_platform.lower():
@@ -141,6 +142,10 @@ def receive_all(server_key: bytes, server_connection, main_cipher: Fernet) -> st
             print("Trying to decrypt total received data")
 
             encrypted_received_data += new_received_data
+
+            if encrypted_received_data == b"":
+                break
+
             decrypted_received_data: str = cipher.decrypt(
             main_cipher.decrypt(encrypted_received_data)).decode()
 
@@ -153,3 +158,153 @@ def receive_all(server_key: bytes, server_connection, main_cipher: Fernet) -> st
             break
 
     return decrypted_received_data
+
+def get_main_key():
+    env = json_repair.from_file(Path(toga.App.app.paths.data, ".env"))
+
+    if env == "":
+        env = {}
+
+    if toga.platform.current_platform == "android":
+        from java.security import KeyStore
+        from javax.crypto import KeyGenerator
+        from android.security.keystore import KeyProperties, KeyGenParameterSpec
+
+        key_generator = KeyGenerator.getInstance(
+            KeyProperties.KEY_ALGORITHM_AES,
+            "AndroidKeyStore"
+        )
+
+        key_generator.init(
+            KeyGenParameterSpec.Builder(
+                "PYPASS_MAIN_KEY",
+                KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT
+            )
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+            .setUserAuthenticationRequired(False)
+            .build()
+        )
+
+        key_store = KeyStore.getInstance("AndroidKeyStore")
+        key_store.load(None)
+
+        if key_store.containsAlias("PYPASS_MAIN_KEY"):
+            key = key_store.getKey("PYPASS_MAIN_KEY", None)
+
+        elif not key_store.containsAlias("PYPASS_MAIN_KEY") and env.get("MAIN_KEY") is not None:
+            key = env["MAIN_KEY"]
+
+        else:
+            key = key_generator.generateKey()
+
+        if env.get("MAIN_KEY") is not None:
+            del env["MAIN_KEY"]
+
+            with open(Path(toga.App.app.paths.data, ".env"), mode="w") as env_file:
+                json.dump(env, env_file)
+
+    else:
+        import keyring
+
+        if keyring.get_password("PYPASS","MAIN_KEY") is None and env.get("FIRST_RUN") == "true":
+
+            key = Fernet.generate_key().decode()
+            keyring.set_password("PYPASS", "MAIN_KEY", key)
+
+        elif "MAIN_KEY" in env.keys() and env.get("FIRST_RUN") == "false":
+            key = env["MAIN_KEY"]
+            keyring.set_password("PYPASS", "MAIN_KEY", key)
+
+            del env["MAIN_KEY"]
+            with open(Path(toga.App.app.paths.data, ".env"), mode="w") as env_file:
+                json.dump(env, env_file)
+
+        else:
+            key = keyring.get_password("PYPASS", "MAIN_KEY")
+
+    print(f"Retrieved MAIN_KEY: {key}")
+
+    return key
+
+def decrypt_data(data_to_decrypt: str or bytes, key_to_use: str="main_key", iv=None):
+    if key_to_use == "main_key":
+        decryption_key = get_main_key()
+
+    else:
+        decryption_key = key_to_use
+
+    if data_to_decrypt is str:
+        data_to_decrypt = data_to_decrypt.encode()
+
+    if toga.platform.current_platform == "android":
+        from java.util import Base64
+        from javax.crypto import Cipher
+        from java.security import KeyStore
+        from javax.crypto.spec import GCMParameterSpec
+
+        key_store_instance = KeyStore.getInstance("AndroidKeyStore")
+        key_store_instance.load(None)
+
+        decryption_iv = Base64.getDecoder().decode(iv)
+
+        decryption_cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        decryption_cipher.init(
+            Cipher.DECRYPT_MODE,
+            decryption_key,
+            GCMParameterSpec(
+                128,
+                decryption_iv
+            )
+        )
+
+        encrypted_decoded = Base64.getDecoder().decode(data_to_decrypt)
+        decrypted_bytes_data = decryption_cipher.doFinal(encrypted_decoded)
+
+        print(f"Decrypted data is: {bytes(decrypted_bytes_data).decode()}")
+
+        return bytes(decrypted_bytes_data).decode()
+
+    else:
+        # Implement logic for desktop OS's
+        return Fernet(decryption_key).decrypt(data_to_decrypt)
+
+def encrypt_data(data_to_encrypt: str or bytes, key_to_use: str ="main_key"):
+    if key_to_use == "main_key":
+        encryption_key = get_main_key()
+
+    else:
+        encryption_key = key_to_use
+
+
+    if isinstance(data_to_encrypt, str) == True:
+        data_to_encrypt = data_to_encrypt.encode()
+
+    print(f"Data to encrypt is: {data_to_encrypt}")
+    print(f"Data to encrypt is of type: {type(data_to_encrypt)}")
+
+    assert isinstance(data_to_encrypt, bytes)
+
+    if toga.platform.current_platform == "android":
+        from java.util import Base64
+        from javax.crypto import Cipher
+
+        cipher_instance = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher_instance.init(Cipher.ENCRYPT_MODE, encryption_key)
+        cipher_iv = cipher_instance.getIV()
+        encrypted_text = cipher_instance.doFinal(data_to_encrypt)
+        encrypted_base64 = Base64.getEncoder().encodeToString(encrypted_text)
+        iv_base64 = Base64.getEncoder().encodeToString(cipher_iv)
+
+        return {
+            "encrypted_data": encrypted_base64,
+            "iv_used": iv_base64
+        }
+
+    else:
+        print(f"Encryption key is: {encryption_key}")
+        encrypted_data = Fernet(encryption_key).encrypt(data_to_encrypt)
+        return {
+            "encrypted_data": encrypted_data,
+            "iv_used": None
+        }

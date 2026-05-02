@@ -217,3 +217,21 @@ async def test_receive_all():
         pass
 
     shutil.rmtree("./data")
+
+def test_get_main_key():
+    Path(toga.App.app.paths.data, ".env").write_text("{}")
+
+    decryption_key = get_main_key()
+    print(f"Decryption key is of type: {type(decryption_key)}")
+
+    if toga.platform.current_platform == "android":
+        from java import jclass
+        assert isinstance(decryption_key, jclass("android.security.keystore2.AndroidKeyStoreSecretKey")) == True
+
+    else:
+        encrypted_text = Fernet(decryption_key).encrypt(b"Some text")
+        assert Fernet(decryption_key).decrypt(encrypted_text).decode() == "Some text"
+
+def test_encrypt_and_decrypt_data():
+    encrypted_data = encrypt_data(data_to_encrypt="Test Text")
+    assert decrypt_data(data_to_decrypt=encrypted_data["encrypted_data"], iv=encrypted_data["iv_used"]) == b"Test Text"

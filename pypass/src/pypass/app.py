@@ -1,6 +1,7 @@
 """
 A Password Manager Written in Python
 """
+import toga
 # Data Structure
 
 # /
@@ -27,6 +28,10 @@ A Password Manager Written in Python
 
 # TODO: Finish the password syncing method, add a way for the user to decide to upload passwords,
 #  download passwords, or recursively upload or download. Integrate password requests on server
+
+# TODO: Add error handling for No route to host error
+
+# TODO: Finish integrating decrypt_data and encrypt_data. Start on line 564
 
 # Window related imports
 from toga.style import Pack
@@ -55,58 +60,11 @@ if toga.platform.current_platform.lower() == "android" or "window" in toga.platf
 else:
     import pyperclip
 
-if toga.platform.current_platform == "android":
-    from java import jbyte
-    from java.util import Base64
-    from java.security import KeyStore
-    from javax.crypto import Cipher, KeyGenerator
-    from android.security.keystore import KeyProperties, KeyGenParameterSpec
-
-    key_generator = KeyGenerator.getInstance(
-        KeyProperties.KEY_ALGORITHM_AES,
-        "AndroidKeyStore"
-    )
-
-    key_generator.init(
-        KeyGenParameterSpec.Builder(
-            "PYPASS_MAIN_KEY",
-            KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT
-        )
-        .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-        .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-        .setUserAuthenticationRequired(False)
-        .build()
-    )
-
-    key = key_generator.generateKey()
-
-    key_store_instance = KeyStore.getInstance("AndroidKeyStore")
-    key_store_instance.load(None)
-
-    alias_key = key_store_instance.getKey("PYPASS_MAIN_KEY", None)
-
-    print(f"alias_key is of type: {type(alias_key)}")
-    print(f"alias_key is set to: {alias_key}")
-
-    cipher_instance = Cipher.getInstance("AES/GCM/NoPadding")
-    cipher_instance.init(Cipher.ENCRYPT_MODE, alias_key)
-    cipher_iv = cipher_instance.getIV()
-    encrypted_text = cipher_instance.doFinal("Secret Text".encode())
-    encrypted_base64 = Base64.getEncoder().encodeToString(encrypted_text)
-    iv_base64 = Base64.getEncoder().encodeToString(cipher_iv)
-
-    # IMPORTANT NOTE: Use encrypted_base64 and iv_base64, when decrypting
-
-    from Crypto.Cipher import AES
-
-    aes_cipher = AES.new(key=alias_key, mode=AES.MODE_GCM, nonce=iv_base64)
-    aes_cipher.decrypt(encrypted_base64)
-
 class PyPass(toga.App):
     # --------------------- App related functions ---------------------#
     async def on_running(self):
         load_env(env_path=os.path.join(self.paths.data, ".env"), env_object=os.environ)
-        self.main_fernet: Fernet = await self.get_main_fernet_object()
+        self.main_fernet: Fernet = Fernet(get_main_key())
 
     def startup(self):
         """Construct and show the Toga application.
@@ -334,40 +292,50 @@ class PyPass(toga.App):
         self.main_window.show()
 
     async def recover_key(self, _):
-        backup_phrase = self.backup_phrase_entry.value.replace(" ", "").split("/")
+        if toga.platform.current_platform != "android":
+            backup_phrase = self.backup_phrase_entry.value.replace(" ", "").split("/")
 
-        recovered_key = recover_key(backup_phrase=backup_phrase)
+            recovered_key = recover_key(backup_phrase=backup_phrase)
 
-        print("The recovered key is: " + recovered_key)
+            print("The recovered key is: " + recovered_key)
 
-        try:
-            Fernet(recovered_key).encrypt(b"text")
+            try:
+                Fernet(recovered_key).encrypt(b"text")
 
-        except cryptography.fernet.InvalidToken:
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="Failed to recover key"
-            )
+            except cryptography.fernet.InvalidToken:
+                dialog = toga.ErrorDialog(
+                    title=self.error_title,
+                    message="Failed to recover key"
+                )
 
-            await self.dialog(dialog)
-            return self.return_to_home_screen(logged_in=False)
+                await self.dialog(dialog)
+                return self.return_to_home_screen(logged_in=False)
+
+            else:
+                username = self.user_entry.value
+
+                user_data = load_user_data(password_file_path=self.data_file_path)
+                user_data["key"] = self.main_fernet.encrypt(recovered_key.encode()).decode()
+
+                with open(self.data_file_path, mode="w") as passwords_file:
+                    json.dump(user_data, passwords_file, indent=4)
+
+                dialog = toga.InfoDialog(
+                    title=self.success_title,
+                    message=f"Successfully recovered key for user {username}"
+                )
+
+                await self.dialog(dialog)
+                return self.return_to_home_screen(logged_in=False)
 
         else:
-            username = self.user_entry.value
-
-            user_data = load_user_data(password_file_path=self.data_file_path)
-            user_data["key"] = self.main_fernet.encrypt(recovered_key.encode()).decode()
-
-            with open(self.data_file_path, mode="w") as passwords_file:
-                json.dump(user_data, passwords_file, indent=4)
-
-            dialog = toga.InfoDialog(
-                title=self.success_title,
-                message=f"Successfully recovered key for user {username}"
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Key recovery is not implemented on android"
             )
 
             await self.dialog(dialog)
-            return self.return_to_home_screen(logged_in=False)
+            return None
 
     def return_to_home_screen(self, _=None, logged_in=True):
         if logged_in:
@@ -514,53 +482,6 @@ class PyPass(toga.App):
                 box_to_add_to=self.a_box,
                 clear_screen=True
             )
-
-    async def get_main_fernet_object(self) -> Fernet or None:
-        main_key = os.environ.get("MAIN_KEY")
-        first_run = os.environ.get("FIRST_RUN")
-
-        if first_run is None:
-            first_run = "true"
-
-        if main_key is None and first_run == "false":
-            dialog = toga.QuestionDialog(
-                title=self.confirm_title,
-                message="No main key was found. Do you want to generate a new one? GENERATING A NEW MAIN KEY WILL "
-                        "LOSE ALL SAVED PASSWORDS FOR ALL USERS!!!"
-            )
-
-            dialog_result = await self.dialog(dialog)
-
-        if first_run == "true" or (main_key is None and dialog_result is True):
-
-            main_key = Fernet.generate_key()
-            os.environ["MAIN_KEY"] = main_key.decode()
-
-            with open(os.path.join(self.paths.data, ".env"), mode="w") as env_file:
-                json.dump(
-                    {
-                        "MAIN_KEY": main_key.decode(),
-                        "FIRST_RUN": "false"
-                    },
-                    env_file,
-                    indent=4
-                )
-
-            for user_folder in os.listdir(self.paths.data):
-                if os.path.isdir(user_folder):
-                    user_path = os.path.join(self.paths.data, user_folder)
-
-                    os.unlink(
-                        os.path.join(
-                            user_path,
-                            ".passwords.json"
-                        )
-                    )
-
-                    os.rmdir(user_path)
-
-        main_fernet = Fernet(main_key)
-        return main_fernet
 
     def get_app_details(self, _):
         data_path_label = toga.Label(
@@ -1376,7 +1297,7 @@ class PyPass(toga.App):
     async def migrate_data(self, _=None, send_data=False, set_up_server=False):
         if send_data:
             user = self.logged_in_user
-            main_key = os.environ.get("MAIN_KEY")
+            main_key = get_main_key()
             user_data = load_user_data(password_file_path=self.data_file_path)
 
             if user_data == "Invalid data saved":
@@ -2334,7 +2255,8 @@ class PyPass(toga.App):
             return await self.dialog(dialog)
 
         self.server.sendall(self.logged_in_user.encode())
-        await asyncio.to_thread(self.server.sendall, os.environ["MAIN_KEY"].encode())
+
+        await asyncio.to_thread(self.server.sendall, get_main_key().encode())
         print("Sent logged in user and main key")
 
         try:
