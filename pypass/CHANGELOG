@@ -5,3 +5,6 @@
 
 ## 1.0.0 (12 Apr 2026)
 * Fix bug preventing user from logging in
+
+## 1.0.0 (02 May 2026)
+* Update .gitignore file
