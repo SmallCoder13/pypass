@@ -2,7 +2,6 @@ from cryptography.fernet import Fernet
 from pypass.app import PyPass
 from pypass.utils import *
 from pathlib import Path
-import shutil
 import pytest
 import toga
 import json
@@ -10,7 +9,6 @@ import os
 
 
 os.environ["TOGA_BACKEND"] = "toga_dummy"
-pytest_plugins = ("pytest_asyncio",)
 
 pypass_object = PyPass(app_id="id", formal_name="name")
 pypass_object.app.paths.data.mkdir(parents=True, exist_ok=True)
@@ -135,89 +133,6 @@ def test_copy_to_clipboard():
 
     assert copy_to_clipboard("Test text") == "Successfully copied to clipboard"
 
-@pytest.mark.asyncio
-async def test_receive_all():
-    import time
-    import socket
-    import asyncio
-    import netifaces
-    from pypass_server import start_server, stop_server
-
-    test_main_key = Fernet.generate_key()
-    interface = netifaces.interfaces()[0]
-    server_result = start_server(server_interface=interface, server_port=9000)
-
-    print(server_result)
-    print(f"Address being returned: {netifaces.ifaddresses(interface)[netifaces.AF_INET][0]["addr"]}")
-
-    await asyncio.sleep(1)
-
-    data_subfolders = os.listdir("./data")
-    del data_subfolders[data_subfolders.index("data.json")]
-
-    print(data_subfolders)
-    assert len(data_subfolders) == 0
-
-    assert server_result["server_running"] == True
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.connect((netifaces.ifaddresses(interface)[netifaces.AF_INET][0]["addr"], 9000))
-
-    await asyncio.to_thread(server.sendall, b"test_user")
-    server.sendall(test_main_key)
-    server_key = Fernet(test_main_key).decrypt(server.recv(1024))
-
-    for_server = {
-        "test": {
-            "test": {
-                "password": "test",
-                "key": server_key.decode()
-            }
-        }
-    }
-
-    encrypted_for_server_string: bytes = Fernet(server_key).encrypt(
-        Fernet(test_main_key).encrypt(
-            json.dumps(for_server).encode()
-        )
-    )
-
-    await asyncio.to_thread(server.sendall, encrypted_for_server_string)
-    await asyncio.to_thread(server.sendall, Fernet(server_key).encrypt(Fernet(test_main_key).encrypt(b"REPLACE")))
-
-    server_response = await asyncio.to_thread(server.recv, 1024)
-
-    assert server_response == b"Successfully updated data"
-
-
-    server.sendall(
-        Fernet(server_key).encrypt(Fernet(test_main_key).encrypt(b"DOWNLOAD_DATA"))
-    )
-
-    downloaded_data = await asyncio.to_thread(
-        receive_all,
-        server_key=server_key,
-        server_connection=server,
-        main_cipher=Fernet(test_main_key)
-    )
-
-    print(f"Data from server: {downloaded_data}")
-
-    assert json.loads(downloaded_data) == for_server
-
-    try:
-        time.sleep(2)
-        await asyncio.to_thread(
-            server.sendall,
-            Fernet(server_key).encrypt(Fernet(test_main_key).encrypt(b"DONE"))
-        )
-        await asyncio.to_thread(stop_server)
-        await asyncio.to_thread(server.close)
-
-    except ConnectionResetError:
-        pass
-
-    shutil.rmtree("./data")
-
 def test_get_main_key():
     Path(toga.App.app.paths.data, ".env").write_text("{}")
 
@@ -234,4 +149,4 @@ def test_get_main_key():
 
 def test_encrypt_and_decrypt_data():
     encrypted_data = encrypt_data(data_to_encrypt="Test Text")
-    assert decrypt_data(data_to_decrypt=encrypted_data["encrypted_data"], iv=encrypted_data["iv_used"]) == b"Test Text"
+    assert decrypt_data(data_to_decrypt=encrypted_data["encrypted_data"], iv=encrypted_data["iv_used"]) == "Test Text"

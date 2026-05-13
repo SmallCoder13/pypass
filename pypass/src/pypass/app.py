@@ -31,7 +31,7 @@ import toga
 
 # TODO: Add error handling for No route to host error
 
-# TODO: Finish integrating decrypt_data and encrypt_data. Start on line 564
+# TODO: Finish integrating decrypt_data and encrypt_data. Start on line 564. All logic using main_key or main_fernet needs to be updated to use the android key store instead. Migrate data needs to be updated for android key store. On android, user and service keys need to be the IV
 
 # Window related imports
 from toga.style import Pack
@@ -63,8 +63,13 @@ else:
 class PyPass(toga.App):
     # --------------------- App related functions ---------------------#
     async def on_running(self):
-        load_env(env_path=os.path.join(self.paths.data, ".env"), env_object=os.environ)
-        self.main_fernet: Fernet = Fernet(get_main_key())
+        load_env(env_path=Path(self.paths.data, ".env"), env_object=os.environ)
+
+        if toga.platform.current_platform.lower() == "android":
+            self.main_fernet = None
+
+        else:
+            self.main_fernet: Fernet = Fernet(get_main_key())
 
     def startup(self):
         """Construct and show the Toga application.
@@ -81,11 +86,6 @@ class PyPass(toga.App):
                 justify_content="start"
             )
         )
-
-        # if toga.platform.current_platform == "android":
-        #     from org.beeware.android import MainActivity
-        #
-        #     self._impl.native = MainActivity.singletonThis
 
         self.error_title = "Oh No!"
         self.success_title = "Yay!"
@@ -134,47 +134,47 @@ class PyPass(toga.App):
             order=1
         )
 
-        add_new_server_command = toga.Command(
-            action=self.collect_server_data,
-            text="Add New Server",
-            group=server_group,
-            order=0
-        )
-
-        edit_server_command = toga.Command(
-            action=self.collect_server_data,
-            text="Edit Server",
-            group=server_group,
-            order=1
-        )
-
-        connect_server_command = toga.Command(
-            action=self.collect_server_data,
-            text="Connect Server",
-            group=server_group,
-            order=2
-        )
-
-        upload_passwords_command = toga.Command(
-            action=self.collect_server_data,
-            text="Upload Passwords to Server",
-            group=server_group,
-            order=3
-        )
-
-        download_passwords_command = toga.Command(
-            action=self.collect_server_data,
-            text="Download Passwords from Server",
-            group=server_group,
-            order=4
-        )
-
-        delete_server_command = toga.Command(
-            action=self.collect_server_data,
-            text="Delete Server",
-            group=server_group,
-            order=6
-        )
+        # add_new_server_command = toga.Command(
+        #     action=self.collect_server_data,
+        #     text="Add New Server",
+        #     group=server_group,
+        #     order=0
+        # )
+        #
+        # edit_server_command = toga.Command(
+        #     action=self.collect_server_data,
+        #     text="Edit Server",
+        #     group=server_group,
+        #     order=1
+        # )
+        #
+        # connect_server_command = toga.Command(
+        #     action=self.collect_server_data,
+        #     text="Connect Server",
+        #     group=server_group,
+        #     order=2
+        # )
+        #
+        # upload_passwords_command = toga.Command(
+        #     action=self.collect_server_data,
+        #     text="Upload Passwords to Server",
+        #     group=server_group,
+        #     order=3
+        # )
+        #
+        # download_passwords_command = toga.Command(
+        #     action=self.collect_server_data,
+        #     text="Download Passwords from Server",
+        #     group=server_group,
+        #     order=4
+        # )
+        #
+        # delete_server_command = toga.Command(
+        #     action=self.collect_server_data,
+        #     text="Delete Server",
+        #     group=server_group,
+        #     order=6
+        # )
 
         migrate_passwords_command = toga.Command(
             action=self.migrate_data,
@@ -275,12 +275,12 @@ class PyPass(toga.App):
         main_box.add(self.a_box)
         self.commands.clear()
 
-        self.commands.add(edit_server_command)
-        self.commands.add(delete_server_command)
-        self.commands.add(connect_server_command)
-        self.commands.add(add_new_server_command)
-        self.commands.add(upload_passwords_command)
-        self.commands.add(download_passwords_command)
+        # self.commands.add(edit_server_command)
+        # self.commands.add(delete_server_command)
+        # self.commands.add(connect_server_command)
+        # self.commands.add(add_new_server_command)
+        # self.commands.add(upload_passwords_command)
+        # self.commands.add(download_passwords_command)
         self.commands.add(migrate_passwords_command)
         self.commands.add(get_app_details_command)
 
@@ -331,7 +331,7 @@ class PyPass(toga.App):
         else:
             dialog = toga.ErrorDialog(
                 title=self.error_title,
-                message="Key recovery is not implemented on android"
+                message="Key recovery is not available on android"
             )
 
             await self.dialog(dialog)
@@ -402,28 +402,34 @@ class PyPass(toga.App):
                 style=self.button_style
             )
 
-            create_backup_phrase_button = toga.Button(
-                text="Create backup phrase",
-                on_press=self.create_backup_phrase,
-                style=self.button_style
-            )
+            if toga.platform.current_platform.lower() != "android":
+                create_backup_phrase_button = toga.Button(
+                    text="Create backup phrase",
+                    on_press=self.create_backup_phrase,
+                    style=self.button_style
+                )
+
+            home_widgets = {
+                "service_label": service_label,
+                "self.service_entry": self.service_entry,
+                "username_label": username_label,
+                "self.username_entry": self.username_entry,
+                "password_label": password_label,
+                "self.service_password_entry": self.service_password_entry,
+                "add_password_button": add_password_button,
+                "generate_password_button": generate_password_button,
+                "edit_password_button": edit_password_button,
+                "get_password_button": get_password_button,
+                "delete_service_button": delete_service_button,
+                "delete_username_button": delete_username_button,
+                "create_backup_phrase_button": create_backup_phrase_button
+            }
+
+            if toga.platform.current_platform.lower() == "android":
+                del home_widgets["create_backup_phrase_button"]
 
             add_to_screen(
-                widgets_to_add={
-                    "service_label": service_label,
-                    "self.service_entry": self.service_entry,
-                    "username_label": username_label,
-                    "self.username_entry": self.username_entry,
-                    "password_label": password_label,
-                    "self.service_password_entry": self.service_password_entry,
-                    "add_password_button": add_password_button,
-                    "generate_password_button": generate_password_button,
-                    "edit_password_button": edit_password_button,
-                    "get_password_button": get_password_button,
-                    "delete_service_button": delete_service_button,
-                    "delete_username_button": delete_username_button,
-                    "create_backup_phrase_button": create_backup_phrase_button
-                },
+                widgets_to_add=home_widgets,
                 box_to_add_to=self.a_box,
                 clear_screen=True
             )
@@ -515,7 +521,7 @@ class PyPass(toga.App):
     async def login(self, _):
         username: str = self.user_entry.value
         password: str = self.password_entry.value
-        username_path = os.path.join(self.paths.data, username)
+        username_path = Path(self.paths.data, username)
 
         is_valid = await self.validate_values(
             to_validate={
@@ -541,7 +547,7 @@ class PyPass(toga.App):
 
             return None
 
-        user_data = load_user_data(password_file_path=os.path.join(username_path, ".passwords.json"))
+        user_data = load_user_data(password_file_path=Path(username_path, ".passwords.json"))
 
         if user_data == "Invalid data saved":
             dialog = toga.ErrorDialog(
@@ -563,7 +569,15 @@ class PyPass(toga.App):
 
         try:
             user_password = user_data[username]
-            user_key = self.main_fernet.decrypt(user_data["key"].encode())
+
+            if self.main_fernet is None and toga.platform.current_platform.lower() == "android":
+                pass
+
+            elif self.main_fernet is None and toga.platform.current_platform.lower() != "android":
+                raise KeyError
+
+            else:
+                user_key = self.main_fernet.decrypt(user_data["key"].encode())
 
         except KeyError:
             dialog = toga.ErrorDialog(
@@ -606,7 +620,11 @@ class PyPass(toga.App):
                     clear_screen=True
                 )
 
-        cipher = Fernet(user_key)
+        if toga.platform.current_platform.lower() == "android":
+            cipher = None
+
+        else:
+            cipher = Fernet(user_key)
 
         if user_data == {}:
             dialog = toga.ConfirmDialog(
@@ -653,19 +671,33 @@ class PyPass(toga.App):
                     clear_screen=True
                 )
 
-        password_correct = check_password(
-            entered_password=password,
-            saved_password=user_password,
-            password_cipher=cipher
-        )
+        if toga.platform.current_platform.lower() == "android":
+            print("Running data decrypt for android")
+            user_data = load_user_data(Path(self.paths.data, username, ".passwords.json"))
+
+            decrypted_key = decrypt_data(data_to_decrypt=user_data["key"], iv=user_data["iv"].encode())
+
+            print(decrypted_key)
+
+            password_correct = check_password(
+                entered_password=password,
+                saved_password=user_password,
+                password_cipher=Fernet(decrypted_key)
+            )
+
+        else:
+            print("Running data decryption normally")
+            password_correct = check_password(
+                entered_password=password,
+                saved_password=user_password,
+                password_cipher=cipher
+            )
 
         if password_correct == "Correct password entered":
             self.logged_in_user = username
-            self.data_file_path = os.path.join(self.paths.data, self.logged_in_user, ".passwords.json")
+            self.data_file_path = Path(self.paths.data, self.logged_in_user, ".passwords.json")
 
-            self.return_to_home_screen()
-
-            return None
+            return self.return_to_home_screen()
 
         elif password_correct == "Incorrect password entered":
             dialog = toga.ErrorDialog(
@@ -687,7 +719,7 @@ class PyPass(toga.App):
         user = self.user_entry.value
         password = self.password_entry.value
 
-        self.data_file_path = os.path.join(self.paths.data, user, ".passwords.json")
+        self.data_file_path = Path(self.paths.data, user, ".passwords.json")
 
         is_valid = await self.validate_values(
             {
@@ -701,12 +733,25 @@ class PyPass(toga.App):
         if not is_valid:
             return None
 
-        create_user_result = create_new_user(user_data_path=os.path.join(self.paths.data, user), user=user, password=password, main_cipher=self.main_fernet)
+        if toga.platform.current_platform.lower() == "android":
+            create_user_result = create_new_user(user_data_path=Path(self.paths.data, user), user=user, password=password, main_cipher="AndroidKeyStore")
+
+        else:
+            create_user_result = create_new_user(user_data_path=Path(self.paths.data, user), user=user, password=password, main_cipher=self.main_fernet)
 
         if create_user_result == "User already exists":
             dialog = toga.ErrorDialog(
                 title=self.error_title,
                 message=f"User {user} already exists"
+            )
+
+            await self.dialog(dialog)
+            return None
+
+        elif create_user_result == "Couldn't encrypt password":
+            dialog = toga.ErrorDialog(
+                title=self.error_title,
+                message="Failed to encrypt supplied password"
             )
 
             await self.dialog(dialog)
@@ -725,9 +770,9 @@ class PyPass(toga.App):
         user = self.user_entry.value
         password = self.password_entry.value
 
-        user_data = load_user_data(password_file_path=os.path.join(self.paths.data, user, ".passwords.json"))
+        user_data = load_user_data(password_file_path=Path(self.paths.data, user, ".passwords.json"))
 
-        if user_data == "":
+        if user_data == "" or user_data == "Password file path doesn't exist":
             dialog = toga.ErrorDialog(
                 title=self.error_title,
                 message="Cannot delete user. User doesn't exist"
@@ -745,9 +790,16 @@ class PyPass(toga.App):
             await self.dialog(dialog)
             return None
 
-        cipher = Fernet(
-            self.main_fernet.decrypt(user_data["key"]),
-        )
+        if toga.platform.current_platform.lower() == "android":
+            print(user_data)
+
+            encrypted_key = user_data["key"]
+            encryption_iv = user_data["iv"]
+
+            cipher = Fernet(decrypt_data(data_to_decrypt=encrypted_key, iv=encryption_iv))
+
+        else:
+            cipher = Fernet(self.main_fernet.decrypt(user_data["key"]))
 
         is_valid = await self.validate_values(
             to_validate={
@@ -780,20 +832,8 @@ class PyPass(toga.App):
         if not confirm_result:
             return None
 
-        os.unlink(
-            os.path.join(
-                self.paths.data,
-                user,
-                ".passwords.json"
-            )
-        )
-
-        os.rmdir(
-            os.path.join(
-                self.paths.data,
-                user
-            )
-        )
+        Path(self.paths.data, user, ".passwords.json").unlink(missing_ok=True)
+        Path(self.paths.data, user).rmdir()
 
         dialog = toga.InfoDialog(
             title=self.success_title,
@@ -858,18 +898,41 @@ class PyPass(toga.App):
             return None
 
         elif service not in user_data["data"].keys():
-            user_data["data"][service] = {
-                username: {
+            # Use AndroidKeyStore on android. On other platforms, use Fernet
+            if toga.platform.current_platform.lower() == "android":
+                key_encryption = encrypt_data(data_to_encrypt=password_key)
+
+                user_data["data"][service] = {
+                    username: {
+                        "password": Fernet(password_key).encrypt(password.encode()).decode(),
+                        "key": key_encryption["encrypted_data"],
+                        "iv": key_encryption["iv_used"]
+                    }
+                }
+
+            else:
+                user_data["data"][service] = {
+                    username: {
+                        "password": cipher.encrypt(password.encode()).decode(),
+                        "key": self.main_fernet.encrypt(password_key).decode()
+                    }
+                }
+
+        elif username not in user_data["data"][service].keys():
+            if toga.platform.current_platform.lower() == "android":
+                key_encryption = encrypt_data(data_to_encrypt=password_key)
+
+                user_data["data"][service][username] = {
+                    "password": Fernet(password_key).encrypt(password.encode()).decode(),
+                    "key": key_encryption["encrypted_data"],
+                    "iv": key_encryption["iv_used"]
+                }
+
+            else:
+                user_data["data"][service][username] = {
                     "password": cipher.encrypt(password.encode()).decode(),
                     "key": self.main_fernet.encrypt(password_key).decode()
                 }
-            }
-
-        elif username not in user_data["data"][service].keys():
-            user_data["data"][service][username] = {
-                "password": cipher.encrypt(password.encode()).decode(),
-                "key": self.main_fernet.encrypt(password_key).decode()
-            }
 
         with open(self.data_file_path, mode="w") as data_file:
             json.dump(user_data, data_file, indent=4)
@@ -959,8 +1022,20 @@ class PyPass(toga.App):
             await self.dialog(dialog)
             return None
 
-        user_data["data"][service][username]["key"] = self.main_fernet.encrypt(new_key).decode()
-        user_data["data"][service][username]["password"] = cipher.encrypt(new_password.encode()).decode()
+        if toga.platform.current_platform.lower() == "android":
+            key_encryption = encrypt_data(data_to_encrypt=new_key)
+
+            user_data["data"][service][username] = {
+                "password": Fernet(new_key).encrypt(new_password.encode()).decode(),
+                "key": key_encryption["encrypted_data"],
+                "iv": key_encryption["iv_used"]
+            }
+
+        else:
+            user_data["data"][service][username] = {
+                "password": cipher.encrypt(new_password.encode()).decode(),
+                "key": self.main_fernet.encrypt(new_key).decode()
+            }
 
         with open(self.data_file_path, mode="w") as data_file:
             json.dump(user_data, data_file, indent=4)
@@ -1039,7 +1114,14 @@ class PyPass(toga.App):
             return None
 
         encrypted_password: str = user_data["data"][service][username]["password"]
-        encryption_key: str = self.main_fernet.decrypt(user_data["data"][service][username]["key"]).decode()
+        encrypted_key: bytes = user_data["data"][service][username]["key"].encode()
+
+        if toga.platform.current_platform.lower() == "android":
+            encryption_iv: str = user_data["data"][service][username]["iv"]
+            encryption_key = decrypt_data(data_to_decrypt=encrypted_key, iv=encryption_iv)
+
+        else:
+            encryption_key: str = self.main_fernet.decrypt(user_data["data"][service][username]["key"]).decode()
 
         cipher = Fernet(encryption_key.encode())
 
@@ -1297,8 +1379,13 @@ class PyPass(toga.App):
     async def migrate_data(self, _=None, send_data=False, set_up_server=False):
         if send_data:
             user = self.logged_in_user
-            main_key = get_main_key()
             user_data = load_user_data(password_file_path=self.data_file_path)
+
+            if toga.platform.current_platform == "android":
+                main_key = None
+
+            else:
+                main_key = get_main_key()
 
             if user_data == "Invalid data saved":
                 dialog = toga.ErrorDialog(
@@ -1356,7 +1443,7 @@ class PyPass(toga.App):
             while not hasattr(self, "migration_successful"):
                 await asyncio.sleep(10)
 
-            await asyncio.to_thread(load_env, env_path=os.path.join(self.paths.data, ".env"), env_object=os.environ)
+            await asyncio.to_thread(load_env, env_path=Path(self.paths.data, ".env"), env_object=os.environ)
 
             dialog = toga.InfoDialog(
                 title=self.success_title,
@@ -1475,852 +1562,6 @@ class PyPass(toga.App):
                 )
 
                 return await self.dialog(dialog)
-
-# --------------------- Server related functions ---------------------#
-
-    async def collect_server_data(self, command_called: toga.Command):
-        if self.logged_in_user is None:
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="Please login before configuring servers"
-            )
-
-            await self.dialog(dialog)
-            return
-
-        print(command_called.text)
-
-        if command_called.text == "Add New Server":
-            server_title_label = toga.Label(
-                text="Server Title: \n(Can be whatever you want) ",
-                style=self.label_style
-            )
-
-            self.server_title_entry = toga.TextInput(
-                style=self.input_style
-            )
-
-            server_address_label = toga.Label(
-                text="Server Address: ",
-                style=self.label_style
-            )
-
-            self.server_address_entry = toga.TextInput(
-                style=self.input_style
-            )
-
-            server_port_label = toga.Label(
-                text="Server Port: ",
-                style=self.label_style
-            )
-
-            self.server_port_entry = toga.TextInput(
-                value="9000",
-                style=self.input_style
-            )
-
-            add_server_button = toga.Button(
-                text="Add Server",
-                on_press=self.add_new_server,
-                style=self.button_style
-            )
-
-            add_to_screen(
-                widgets_to_add={
-                    "server_title_label": server_title_label,
-                    "self.server_title_entry": self.server_title_entry,
-                    "server_address_label": server_address_label,
-                    "self.server_address_entry": self.server_address_entry,
-                    "server_port_label": server_port_label,
-                    "self.server_port_entry": self.server_port_entry,
-                    "add_server_button": add_server_button
-                },
-                box_to_add_to=self.a_box,
-                clear_screen=True
-            )
-
-        elif command_called.text == "Edit Server":
-            server_title_label = toga.Label(
-                text="Server Title: \n(Can be whatever you want) ",
-                style=self.label_style
-            )
-
-            self.server_title_entry = toga.TextInput(
-                style=self.input_style
-            )
-
-            server_address_label = toga.Label(
-                text="Server Address: ",
-                style=self.label_style
-            )
-
-            self.server_address_entry = toga.TextInput(
-                style=self.input_style
-            )
-
-            server_port_label = toga.Label(
-                text="Server Port: ",
-                style=self.label_style
-            )
-
-            self.server_port_entry = toga.TextInput(
-                value="9000",
-                style=self.input_style
-            )
-
-            edit_server_button = toga.Button(
-                text="Edit Server",
-                on_press=self.edit_server,
-                style=self.button_style
-            )
-
-            add_to_screen(
-                widgets_to_add={
-                    "server_title_label": server_title_label,
-                    "self.server_title_entry": self.server_title_entry,
-                    "server_address_label": server_address_label,
-                    "self.server_address_entry": self.server_address_entry,
-                    "server_port_label": server_port_label,
-                    "self.server_port_entry": self.server_port_entry,
-                    "edit_server_button": edit_server_button
-                },
-                box_to_add_to=self.a_box,
-                clear_screen=True
-            )
-
-        elif command_called.text == "Delete Server":
-            server_title_label = toga.Label(
-                text="Server Title: ",
-                style=self.label_style
-            )
-
-            self.server_title_entry = toga.TextInput(
-                style=self.input_style
-            )
-
-            delete_server_button = toga.Button(
-                text="Delete Server",
-                on_press=self.delete_server,
-                style=self.button_style
-            )
-
-            add_to_screen(
-                widgets_to_add={
-                    "server_title_label": server_title_label,
-                    "self.server_title_entry": self.server_title_entry,
-                    "delete_server_button": delete_server_button
-                },
-                box_to_add_to=self.a_box,
-                clear_screen=True
-            )
-
-        if command_called.text == "Upload Passwords to Server":
-            server_title_label = toga.Label(
-                text="Server Title: ",
-                style=self.label_style
-            )
-
-            self.server_title_entry = toga.TextInput(
-                style=self.input_style
-            )
-
-            sync_passwords_button = toga.Button(
-                text="Upload Passwords",
-                on_press=self.upload_passwords,
-                style=self.button_style
-            )
-
-            add_to_screen(
-                widgets_to_add={
-                    "server_title_label": server_title_label,
-                    "self.server_title_entry": self.server_title_entry,
-                    "sync_passwords_button": sync_passwords_button
-                },
-                box_to_add_to=self.a_box,
-                clear_screen=True
-            )
-
-        elif command_called.text == "Download Passwords from Server":
-            server_title_label = toga.Label(
-                text="Server Title: ",
-                style=self.label_style
-            )
-
-            self.server_title_entry = toga.TextInput(
-                style=self.input_style
-            )
-
-            download_passwords_button = toga.Button(
-                text="Download Passwords",
-                on_press=self.download_passwords,
-                style=self.button_style
-            )
-
-            add_to_screen(
-                widgets_to_add={
-                    "server_title_label": server_title_label,
-                    "self.server_title_entry": self.server_title_entry,
-                    "download_passwords_button": download_passwords_button
-                },
-                box_to_add_to=self.a_box,
-                clear_screen=True
-            )
-
-        elif command_called.text == "Connect Server":
-            server_title_label = toga.Label(
-                text="Server Title: ",
-                style=self.label_style
-            )
-
-            self.server_title_entry = toga.TextInput(
-                style=self.input_style
-            )
-
-            connect_server_button = toga.Button(
-                text="Connect to Server",
-                on_press=self.connect_to_server,
-                style=self.button_style
-            )
-
-            add_to_screen(
-                widgets_to_add={
-                    "server_title_label": server_title_label,
-                    "self.server_title_entry": self.server_title_entry,
-                    "connect_server_button": connect_server_button
-                },
-                box_to_add_to=self.a_box,
-                clear_screen=True
-            )
-
-    async def add_new_server(self, _):
-        server_title = self.server_title_entry.value
-        server_address = self.server_address_entry.value
-        server_port = self.server_port_entry.value
-
-        user_data = load_user_data(password_file_path=self.data_file_path)
-        user_data_path = os.path.join(self.paths.data, self.logged_in_user, ".passwords.json")
-
-        if user_data == "Invalid data saved":
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="Failed to add new server. Cannot load user data"
-            )
-
-            await self.dialog(dialog)
-            return None
-
-        elif user_data == "Password file path doesn't exist":
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="Failed to add new server. User data file doesn't exist"
-            )
-
-            await self.dialog(dialog)
-            return None
-
-        is_valid = await self.validate_values(
-            to_validate={
-                "Server Title": server_title,
-                "Server Address": server_address,
-                "Server Port": server_port
-            },
-            message_for_dialog="<value> cannot be empty",
-            inverse_check=True
-        )
-
-        if not is_valid:
-            return None
-
-        if "servers" not in user_data.keys():
-            user_data["servers"] = {}
-
-        for server in user_data["servers"].keys():
-            if server_address in user_data["servers"][server].keys():
-                dialog = toga.ErrorDialog(
-                    title=self.error_title,
-                    message=f"Couldn't add new server. Server with address of {server_address} is already saved"
-                )
-
-                await self.dialog(dialog)
-                return None
-
-        if server_title in user_data["servers"].keys():
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message=f"Couldn't add new server. Server titled {server_title} already exists"
-            )
-
-            await self.dialog(dialog)
-            return None
-
-        user_data["servers"][server_title] = {
-            "server_address": server_address,
-            "server_port": server_port
-        }
-
-        with open(user_data_path, mode="w") as data_file:
-            json.dump(user_data, data_file, indent=4)
-
-        dialog = toga.InfoDialog(
-            title=self.success_title,
-            message=f"Successfully added new server titled {server_title}"
-        )
-
-        await self.dialog(dialog)
-
-        return self.return_to_home_screen()
-
-    async def edit_server(self, _):
-        server_title = self.server_title_entry.value
-        server_address = self.server_address_entry.value
-        server_port = self.server_port_entry.value
-
-        user_data = load_user_data(password_file_path=self.data_file_path)
-        data_path = os.path.join(self.paths.data, self.logged_in_user, ".passwords.json")
-
-        if user_data == "Invalid data saved":
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="Failed to edit server. Cannot load user data"
-            )
-
-            await self.dialog(dialog)
-            return None
-
-        elif user_data == "Password file path doesn't exist":
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="Failed to edit server. User data file doesn't exist"
-            )
-
-            await self.dialog(dialog)
-            return None
-
-        is_valid = await self.validate_values(
-            to_validate={
-                "Server Title": server_title,
-                "Server Address": server_address,
-                "Server Port": server_port
-            },
-            message_for_dialog="<value> cannot be empty",
-            inverse_check=True
-        )
-
-        if not is_valid:
-            return None
-
-        server_exists = self.check_for_server(server_title)
-
-        if not server_exists:
-            return None
-
-        del user_data["servers"][server_title]
-
-        user_data["servers"][server_title] = {
-            "server_address": server_address,
-            "server_port": server_port
-        }
-
-        with open(data_path, mode="w") as data_file:
-            json.dump(user_data, data_file, indent=4)
-
-        dialog = toga.InfoDialog(
-            title=self.success_title,
-            message=f"Successfully edited server {server_title}"
-        )
-
-        await self.dialog(dialog)
-
-        return self.return_to_home_screen()
-
-    async def delete_server(self, _):
-        server_title = self.server_title_entry.value
-
-        user_data = load_user_data(password_file_path=self.data_file_path)
-        data_path = os.path.join(self.paths.data, self.logged_in_user, ".passwords.json")
-
-        if user_data == "Invalid data saved":
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="Failed to delete server. Cannot load user data"
-            )
-
-            await self.dialog(dialog)
-            return None
-
-        elif user_data == "Password file path doesn't exist":
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="Failed to delete server. User data file doesn't exist"
-            )
-
-            await self.dialog(dialog)
-            return None
-
-        is_valid = await self.validate_values(
-            to_validate={
-                "Server title": server_title
-            },
-            message_for_dialog="<value> cannot be empty",
-            inverse_check=True
-        )
-
-        if not is_valid:
-            return None
-
-        server_exists = await self.check_for_server(server_title)
-
-        if not server_exists:
-            return None
-
-        del user_data["servers"][server_title]
-
-        with open(data_path, mode="w") as data_file:
-            json.dump(user_data, data_file, indent=4)
-
-        dialog = toga.InfoDialog(
-            title=self.success_title,
-            message=f"Successfully deleted server {server_title}"
-        )
-
-        await self.dialog(dialog)
-        return self.return_to_home_screen()
-
-    async def upload_passwords(self, _):
-        if self.server is None:
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="No server is connected. Please connect to a server, and try again"
-            )
-
-            await self.dialog(dialog)
-            return self.return_to_home_screen()
-
-        server_title = self.server_title_entry.value
-
-        user_data = load_user_data(password_file_path=self.data_file_path)
-
-        if user_data == "Invalid data saved":
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="Failed to upload passwords to server. Cannot load user data"
-            )
-
-            await self.dialog(dialog)
-            return None
-
-        elif user_data == "Password file path doesn't exist":
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="Failed to upload passwords to server. User data file doesn't exist"
-            )
-
-            await self.dialog(dialog)
-            return None
-
-        is_valid = await self.validate_values(
-            to_validate={
-                "Server Title": server_title
-            },
-            message_for_dialog="<value> cannot be empty",
-            inverse_check=True
-        )
-
-        if not is_valid:
-            return self.return_to_home_screen()
-
-        server_exists = await self.check_for_server(server_title)
-
-        if not server_exists:
-            return self.return_to_home_screen()
-
-        if not "data" in user_data.keys():
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="Can't upload passwords. No passwords are saved"
-            )
-
-            await self.dialog(dialog)
-            return self.return_to_home_screen()
-
-        try:
-            for_server = {}
-            server_cipher = Fernet(self.server_key)
-
-        except ValueError:
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="The server sent an invalid key. Please restart the app, and try again"
-            )
-
-            await self.dialog(dialog)
-            return self.return_to_home_screen()
-
-        for service in user_data["data"].keys():
-            for username in user_data["data"][service].keys():
-                encrypted_password = user_data["data"][service][username]["password"]
-                encryption_key = user_data["data"][service][username]["key"]
-                print(encryption_key)
-                cipher = Fernet(self.main_fernet.decrypt(encryption_key))
-
-                if service not in for_server.keys():
-                    for_server[service] = {
-                        username: {
-                            "password": cipher.decrypt(encrypted_password).decode(),
-                            "key": self.server_key.decode()
-                        }
-                    }
-
-                else:
-                    for_server[service][username] = {
-                        "password": cipher.decrypt(encrypted_password).decode(),
-                        "key": self.server_key.decode()
-                    }
-
-        encrypted_for_server_string: bytes = server_cipher.encrypt(
-            self.main_fernet.encrypt(
-                json.dumps(for_server).encode()
-            )
-        )
-
-        print(f"Encrypted string is: {encrypted_for_server_string}")
-        await asyncio.to_thread(self.server.sendall, encrypted_for_server_string)
-        print("Sent data")
-
-        await asyncio.to_thread(self.server.sendall, b"DONE")
-
-        confirm_dialog = toga.QuestionDialog(
-            title=self.confirm_title,
-            message="Do you want to recursively update data on server (Doesn't replace deleted passwords)?"
-        )
-
-        update_recursively = await self.dialog(confirm_dialog)
-
-        print(f"Update recursively is: {update_recursively}")
-
-        if update_recursively:
-            await asyncio.to_thread(self.server.sendall, server_cipher.encrypt(self.main_fernet.encrypt(b"RECURSIVE")))
-            print("Sent recursive command to server")
-
-        else:
-            await asyncio.to_thread(self.server.sendall, server_cipher.encrypt(self.main_fernet.encrypt(b"REPLACE")))
-
-        self.server.sendall(server_cipher.encrypt(self.main_fernet.encrypt(b"DONE")))
-        print("Sent done message to server")
-
-        message_from_server = await asyncio.to_thread(self.server.recv, 1024)
-
-        if message_from_server.decode() == "Successfully updated data":
-            dialog = toga.InfoDialog(
-                title=self.success_title,
-                message="Successfully updated data"
-            )
-
-            await self.dialog(dialog)
-
-        else:
-            print(message_from_server)
-
-        await asyncio.to_thread(self.server.close)
-        self.server = None
-
-        return self.return_to_home_screen()
-
-    async def download_passwords(self, button_called: toga.Button):
-        if button_called.text == "Recover Passwords":
-            server_address = self.server_address_entry.value
-            server_port = int(self.server_port_entry.value)
-
-            try:
-                self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.server.connect((server_address, server_port))
-
-            except ConnectionRefusedError:
-                dialog = toga.ErrorDialog(
-                    title=self.error_title,
-                    message=f"Couldn't connect to server. Connection to server was refused. Please make sure the server address is correct, and listening on port {server_port}"
-                )
-
-                await self.dialog(dialog)
-                return self.return_to_home_screen()
-
-            await asyncio.to_thread(self.server.sendall, self.user_entry.value.encode())
-            encrypted_server_key = await asyncio.to_thread(self.server.recv, 1024)
-
-            try:
-                self.server_key = self.main_fernet.decrypt(encrypted_server_key)
-
-            except ValueError:
-                dialog = toga.ErrorDialog(
-                    title=self.error_title,
-                    message="The server sent an invalid key. Please restart the app, and try again"
-                )
-
-                await self.dialog(dialog)
-                return self.return_to_home_screen()
-
-        if self.server is None:
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="No server is connected. Please connect to a server, and try again"
-            )
-
-            await self.dialog(dialog)
-            return self.return_to_home_screen()
-
-        if not button_called.text == "Recover Passwords":
-            server_title = self.server_title_entry.value
-
-            data_path = os.path.join(self.paths.data, self.logged_in_user, ".passwords.json")
-
-        else:
-            data_path = os.path.join(self.paths.data, self.user_entry.value, ".passwords.json")
-
-        if not button_called.text == "Recover Passwords":
-            is_valid = await self.validate_values(
-                to_validate={
-                    "Server Title": server_title
-                },
-                message_for_dialog="<value> cannot be empty",
-                inverse_check=True
-            )
-
-            if not is_valid:
-                print("Invalid values")
-                return None
-
-            server_exists = await self.check_for_server(server_title)
-
-            if not server_exists:
-                return None
-
-        print("Sending download command")
-        self.server.sendall(
-            Fernet(self.server_key).encrypt(self.main_fernet.encrypt(b"DOWNLOAD_DATA"))
-        )
-
-        print("Sent download command to server, await response")
-
-        downloaded_user_data_str: str = receive_all(
-            server_key=self.server_key,
-            main_cipher=self.main_fernet,
-            server_connection=self.server,
-        )
-
-        print("Finished calling receive_all")
-
-        if downloaded_user_data_str.startswith("Failed to download passwords. "):
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message=f"Failed to download password from server. Reason: {downloaded_user_data_str.replace('Failed to download passwords. ', '')}"
-            )
-
-            self.return_to_home_screen()
-            return await self.dialog(dialog)
-
-        await asyncio.to_thread(self.server.close)
-        self.server = None
-
-        print("Received response")
-
-        if not button_called.text == "Recover Passwords":
-            dialog = toga.QuestionDialog(
-                title=self.confirm_title,
-                message=f"Are you sure you want to download all passwords from the server titled {server_title}? \n\n"
-                        "NOTE: This will overwrite all your existing passwords. "
-                        "Any passwords that aren't saved to the server, will be lost"
-            )
-
-            dialog_result = await self.dialog(dialog)
-
-        else:
-            dialog_result = True
-
-        if dialog_result:
-            downloaded_server_data = json_repair.loads(downloaded_user_data_str)
-
-            for downloaded_service in downloaded_server_data.keys():
-                for downloaded_username in downloaded_server_data[downloaded_service].keys():
-                    password = downloaded_server_data[downloaded_service][downloaded_username]["password"]
-                    key = downloaded_server_data[downloaded_service][downloaded_username]["key"]
-                    cipher = Fernet(key.encode())
-
-                    downloaded_server_data[downloaded_service][downloaded_username] = {
-                        "password": cipher.encrypt(password.encode()).decode(),
-                        "key": self.main_fernet.encrypt(key.encode()).decode()
-                    }
-
-            user = self.user_entry.value
-            password = self.password_entry.value
-            encryption_key = Fernet.generate_key()
-
-            user_data = load_user_data(password_file_path=self.data_file_path)
-
-            if user_data == "Invalid data saved":
-                dialog = toga.ErrorDialog(
-                    title=self.error_title,
-                    message="Failed to download passwords from server. Cannot load user data"
-                )
-
-                await self.dialog(dialog)
-                return None
-
-            elif user_data == "Password file path doesn't exist":
-                dialog = toga.ErrorDialog(
-                    title=self.error_title,
-                    message="Failed to download passwords from server. User data file doesn't exist"
-                )
-
-                await self.dialog(dialog)
-                return None
-
-            downloaded_user_data = {
-                user: Fernet(encryption_key).encrypt(password.encode()).decode(),
-                "key": self.main_fernet.encrypt(encryption_key).decode(),
-                "data": downloaded_server_data,
-                "servers": user_data["servers"]
-            }
-
-            with open(data_path, mode="w") as data_file:
-                json.dump(downloaded_user_data, data_file, indent=4)
-
-            if not button_called.text == "Recover Passwords":
-                dialog = toga.InfoDialog(
-                    title=self.success_title,
-                    message=f"Successfully downloaded passwords from server titled {server_title}"
-                )
-
-                await self.dialog(dialog)
-
-            else:
-                dialog = toga.InfoDialog(
-                    title=self.success_title,
-                    message="Successfully recovered data"
-                )
-
-                await self.dialog(dialog)
-
-        return self.return_to_home_screen()
-
-    async def connect_to_server(self, _):
-        server_title = self.server_title_entry.value
-        user_data = load_user_data(password_file_path=self.data_file_path)
-
-        if user_data == "Invalid data saved":
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="Failed to connect to server. Cannot load user data"
-            )
-
-            await self.dialog(dialog)
-            return None
-
-        elif user_data == "Password file path doesn't exist":
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="Failed to connect to server. User data file doesn't exist"
-            )
-
-            await self.dialog(dialog)
-            return None
-
-        if self.server is not None:
-            await asyncio.to_thread(self.server.close)
-
-        server_exists = await self.check_for_server(server_title)
-
-        print(f"Server exists: {server_exists}")
-
-        if not server_exists:
-            return None
-
-        server_data = user_data["servers"][server_title]
-        print("Retrieved server data")
-
-        try:
-            print("Connecting to server")
-            self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.server.connect((server_data["server_address"], int(server_data["server_port"])))
-
-            print("Was able to connect to server`")
-
-        except ConnectionRefusedError:
-            print("Connection was refused")
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message=f"Couldn't connect to server titled {server_title}. Connection was refused. \n "
-                        f"Please ensure the server is running and listening on port {server_data['server_port']}"
-            )
-
-            return await self.dialog(dialog)
-
-        self.server.sendall(self.logged_in_user.encode())
-
-        await asyncio.to_thread(self.server.sendall, get_main_key().encode())
-        print("Sent logged in user and main key")
-
-        try:
-            encrypted_server_key = await asyncio.to_thread(self.server.recv, 1024)
-            self.server_key = self.main_fernet.decrypt(encrypted_server_key)
-
-        except ValueError:
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="The server sent an invalid key. Please restart the app, and try again"
-            )
-
-            await self.dialog(dialog)
-            return self.return_to_home_screen()
-
-        dialog = toga.InfoDialog(
-            title=self.success_title,
-            message=f"Successfully connected to server titled {server_title}"
-        )
-
-        self.return_to_home_screen()
-        return await self.dialog(dialog)
-
-    async def check_for_server(self, server_title: str) -> bool:
-        user_data = load_user_data(password_file_path=self.data_file_path)
-
-        if user_data == "Invalid data saved":
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="Failed to check for server. Cannot load user data"
-            )
-
-            await self.dialog(dialog)
-            return False
-
-        elif user_data == "Password file path doesn't exist":
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="Failed to check for server. User data file doesn't exist"
-            )
-
-            await self.dialog(dialog)
-            return False
-
-        if "servers" not in user_data.keys():
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="No servers are saved. Please save a server, then try again"
-            )
-
-            await self.dialog(dialog)
-            self.return_to_home_screen()
-            return False
-
-        if server_title not in user_data["servers"].keys():
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message=f"No server titled {server_title} is saved"
-            )
-
-            await self.dialog(dialog)
-            return False
-
-        return True
 
     # --------------------- Utility related functions ---------------------#
 

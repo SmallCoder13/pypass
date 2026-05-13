@@ -4,7 +4,8 @@ project_name = "PyPass"
 bundle = "com.coryellcottage"
 version = "1.0.0"
 url = "https://coryellcottage.github.io/pypass/"
-license.file = "LICENSE"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
 author = "Spyridon Coryell"
 author_email = "SpyridonCoryell@protonmail.com"
 
@@ -50,9 +51,7 @@ test_requires = [
     "keyring",
     "requests",
     "netifaces",
-    "toga-dummy",
-    "pytest-asyncio",
-    "git+https://github.com/coryellcottage/pypass_server.git"
+    "toga-dummy"
 ]
 
 [tool.briefcase.app.pypass.macOS]
@@ -229,7 +228,3 @@ requires = [
     "toga-web~=0.5.0",
 ]
 style_framework = "Shoelace v2.3"
-
-#Pytest Config
-[tool.pytest.ini_options]
-asyncio_default_fixture_loop_scope = "function"

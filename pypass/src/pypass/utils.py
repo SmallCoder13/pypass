@@ -61,8 +61,7 @@ def load_env(env_path, env_object: os._Environ) -> str:
     return "Loaded environment"
 
 
-def check_password(entered_password: str, saved_password: str, password_cipher: Fernet) -> str:
-
+def check_password(entered_password: str, saved_password: str, password_cipher: Fernet=None) -> str:
     if password_cipher.decrypt(saved_password).decode() == entered_password:
         return "Correct password entered"
 
@@ -70,8 +69,8 @@ def check_password(entered_password: str, saved_password: str, password_cipher: 
         return "Incorrect password entered"
 
 
-def load_user_data(password_file_path: str) -> str | dict:
-    if not os.path.exists(password_file_path):
+def load_user_data(password_file_path: Path) -> str | dict:
+    if not password_file_path.exists():
         return "Password file path doesn't exist"
 
     user_data = json_repair.from_file(password_file_path)
@@ -82,17 +81,33 @@ def load_user_data(password_file_path: str) -> str | dict:
     return user_data
 
 
-def create_new_user(user_data_path: str, user: str, password: str, main_cipher: Fernet) -> str:
+def create_new_user(user_data_path: str, user: str, password: str, main_cipher: Fernet or str) -> str:
     encryption_key = Fernet.generate_key()
     cipher = Fernet(encryption_key)
 
     if os.path.exists(user_data_path):
         return "User already exists"
 
-    user_data = {
-        user: cipher.encrypt(password.encode()).decode(),
-        "key": main_cipher.encrypt(encryption_key).decode()
-    }
+    if isinstance(main_cipher, Fernet):
+        user_data = {
+            user: cipher.encrypt(password.encode()).decode(),
+            "key": main_cipher.encrypt(encryption_key).decode()
+        }
+
+    elif isinstance(main_cipher, str):
+        data = encrypt_data(data_to_encrypt=encryption_key)
+
+        user_data = {
+            user: cipher.encrypt(password.encode()).decode(),
+            "key": data["encrypted_data"],
+            "iv": data["iv_used"]
+
+        }
+
+    else:
+        return "Couldn't encrypt password"
+
+    print(f"User_data: \n{user_data}")
 
     os.mkdir(user_data_path)
 
@@ -118,49 +133,12 @@ def copy_to_clipboard(data_to_copy: str):
     else:
         return "Can't copy to clipboard. Unsupported OS"
 
-def receive_all(server_key: bytes, server_connection, main_cipher: Fernet) -> str:
-    cipher = Fernet(server_key)
-
-    encrypted_received_data: bytes = b""
-
-    while True:
-        print("Receiving new data")
-        new_received_data = server_connection.recv(1024)
-
-        print(
-            f"\n ------------------------------ \n    Total received data: {encrypted_received_data} \n ------------------------------ ")
-        print(
-            f"\n ------------------------------ \n    New data received: {new_received_data} \n ------------------------------ ")
-
-        if new_received_data.decode() == "DONE":
-            decrypted_received_data: str = cipher.decrypt(
-                main_cipher.decrypt(encrypted_received_data)).decode()
-
-            break
-
-        try:
-            print("Trying to decrypt total received data")
-
-            encrypted_received_data += new_received_data
-
-            if encrypted_received_data == b"":
-                break
-
-            decrypted_received_data: str = cipher.decrypt(
-            main_cipher.decrypt(encrypted_received_data)).decode()
-
-        except InvalidToken:
-            print("Couldn't decrypt received data")
-
-        else:
-            print("Data was successfully decrypted, breaking out of while loop")
-            encrypted_received_data = b""
-            break
-
-    return decrypted_received_data
-
 def get_main_key():
-    env = json_repair.from_file(Path(toga.App.app.paths.data, ".env"))
+    if Path(toga.App.app.paths.data, ".env").exists():
+        env = json_repair.from_file(Path(toga.App.app.paths.data, ".env"))
+
+    else:
+        env = {}
 
     if env == "":
         env = {}
@@ -227,25 +205,21 @@ def get_main_key():
 
     return key
 
-def decrypt_data(data_to_decrypt: str or bytes, key_to_use: str="main_key", iv=None):
+
+def decrypt_data(data_to_decrypt: bytes, key_to_use: str="main_key", iv=None) -> str:
     if key_to_use == "main_key":
         decryption_key = get_main_key()
 
     else:
         decryption_key = key_to_use
 
-    if data_to_decrypt is str:
-        data_to_decrypt = data_to_decrypt.encode()
-
-    if toga.platform.current_platform == "android":
+    if toga.platform.current_platform.lower() == "android":
         from java.util import Base64
         from javax.crypto import Cipher
-        from java.security import KeyStore
         from javax.crypto.spec import GCMParameterSpec
 
-        key_store_instance = KeyStore.getInstance("AndroidKeyStore")
-        key_store_instance.load(None)
-
+        print(type(iv))
+        print(iv)
         decryption_iv = Base64.getDecoder().decode(iv)
 
         decryption_cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -267,9 +241,14 @@ def decrypt_data(data_to_decrypt: str or bytes, key_to_use: str="main_key", iv=N
 
     else:
         # Implement logic for desktop OS's
-        return Fernet(decryption_key).decrypt(data_to_decrypt)
+        decrypted_data = Fernet(decryption_key).decrypt(data_to_decrypt)
 
-def encrypt_data(data_to_encrypt: str or bytes, key_to_use: str ="main_key"):
+        if isinstance(decrypted_data, bytes):
+            decrypted_data = decrypted_data.decode()
+
+        return decrypted_data
+
+def encrypt_data(data_to_encrypt: str or bytes, key_to_use: str ="main_key") -> dict:
     if key_to_use == "main_key":
         encryption_key = get_main_key()
 

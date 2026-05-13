@@ -12,9 +12,6 @@ def run_tests():
     # default to running the whole test suite.
     args = sys.argv[1:]
 
-    if len(args) == 0:
-        args = ["tests"]
-
     returncode = pytest.main(
         args=[
             # Turn up verbosity
