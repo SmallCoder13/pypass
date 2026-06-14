@@ -19,25 +19,26 @@ class MigrationServer:
 
         data_path = toga.App.app.paths.data
 
-        user_data = json.loads(user_data)
+        user_data = json_repair.loads(user_data)
+
         print(user_data)
 
-        env_data = json_repair.from_file(os.path.join(data_path, ".env"))
-        env_data["MAIN_KEY"] = main_key
+        if toga.platform.current_platform.lower() == "android":
+            for offset_service in user_data:
+                for offset_username in user_data[offset_service]:
+                    offset_password = user_data[offset_service][offset_username]["password"]
+                    offset_key = user_data[offset_service][offset_username]["key"]
 
-        with open(os.path.join(data_path, current_user, ".passwords.json"), mode="w") as passwords_file:
-            json.dump(user_data, passwords_file)
+                    password_list = offset_password.split(" ")
+                    key_list = offset_key.split(" ")
 
-        with open(os.path.join(data_path, ".env"), mode="w") as env_file:
-            json.dump(env_data, env_file)
+                    for character in password_list:
+                        print(character)
 
-        toga.App.app.migration_successful = True
+        # with open(os.path.join(data_path, current_user, ".passwords.json"), mode="w") as passwords_file:
+        #     json.dump(user_data, passwords_file)
 
-        # app_env = json_repair.from_file(os.path.join(data_path, ".env"))
-        # app_env["MIGRATION_SUCCESSFUL"] = "true"
-        #
-        # with open(os.path.join(data_path, ".env"), mode="w") as env_file:
-        #     json.dump(app_env, env_file)
+        # toga.App.app.migration_successful = True
 
         return {
             "success": True,

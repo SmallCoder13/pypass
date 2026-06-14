@@ -1,10 +1,9 @@
 """
 A cross-platform password manager written in python
 """
+import json
 
-import toga
-from toga.style.pack import COLUMN, ROW
-
+import json_repair
 # Data Structure
 
 # /
@@ -30,9 +29,11 @@ from toga.style.pack import COLUMN, ROW
 # }
 
 # Window related imports
+import toga
 from toga.style import Pack
 
 # App related imports
+import random
 import os.path
 import asyncio
 import secrets
@@ -44,8 +45,9 @@ from cryptography import fernet
 from cryptography.fernet import Fernet
 
 # Data migration imports
-import httpx
+# import httpx
 import psutil
+import multiprocessing
 
 from pprint import pprint as print
 
@@ -55,10 +57,26 @@ if toga.platform.current_platform.lower() == "android" or "window" in toga.platf
 else:
     import pyperclip
 
+# Transfer migration ability from migration server to background server
+# Command successfully sent to server, have to add handling for send command
 
 class BastionPass(toga.App):
     async def on_running(self):
         load_env(env_path=Path(self.paths.data, ".env"), env_object=os.environ)
+
+        if os.environ.get("PORT") is None:
+            os.environ["PORT"] = "9000"
+
+            if Path(self.paths.data, ".env").exists():
+                env_data = json_repair.from_file(Path(self.paths.data, ".env"))
+
+            else:
+                env_data = {
+                    "PORT": "9000"
+                }
+
+            with open(Path(self.paths.data, ".env"), mode="w") as env_file:
+                json.dump(env_data, env_file)
 
         if toga.platform.current_platform.lower() == "android":
             self.main_fernet = None
@@ -119,62 +137,15 @@ class BastionPass(toga.App):
             "Z": "zebra",
         }
 
-        server_group = toga.Group(
-            text="Server Config",
-            order=0
-        )
-
         password_group = toga.Group(
             text="Password Management",
             order=1
         )
 
-        # add_new_server_command = toga.Command(
-        #     action=self.collect_server_data,
-        #     text="Add New Server",
-        #     group=server_group,
-        #     order=0
-        # )
-        #
-        # edit_server_command = toga.Command(
-        #     action=self.collect_server_data,
-        #     text="Edit Server",
-        #     group=server_group,
-        #     order=1
-        # )
-        #
-        # connect_server_command = toga.Command(
-        #     action=self.collect_server_data,
-        #     text="Connect Server",
-        #     group=server_group,
-        #     order=2
-        # )
-        #
-        # upload_passwords_command = toga.Command(
-        #     action=self.collect_server_data,
-        #     text="Upload Passwords to Server",
-        #     group=server_group,
-        #     order=3
-        # )
-        #
-        # download_passwords_command = toga.Command(
-        #     action=self.collect_server_data,
-        #     text="Download Passwords from Server",
-        #     group=server_group,
-        #     order=4
-        # )
-        #
-        # delete_server_command = toga.Command(
-        #     action=self.collect_server_data,
-        #     text="Delete Server",
-        #     group=server_group,
-        #     order=6
-        # )
-
-        migrate_passwords_command = toga.Command(
-            action=self.migrate_data,
+        send_passwords_command = toga.Command(
+            action=self.send_data,
             group=password_group,
-            text="Migrate data",
+            text="Send data to new device",
             order=0
         )
 
@@ -254,29 +225,23 @@ class BastionPass(toga.App):
         )
 
         add_to_screen(
-            widgets_to_add={
-                "user_label": user_label,
-                "self.user_entry": self.user_entry,
-                "password_label": password_label,
-                "self.password_entry": self.password_entry,
-                "login_button": login_button,
-                "create_user_button": create_user_button,
-                "delete_user_button": delete_user_button
-            },
+            widgets_to_add=(
+                user_label,
+                self.user_entry,
+                password_label,
+                self.password_entry,
+                login_button,
+                create_user_button,
+                delete_user_button
+            ),
             box_to_add_to=self.a_box,
             clear_screen=True
         )
 
         main_box.add(self.a_box)
-        self.commands.clear()
 
-        # self.commands.add(edit_server_command)
-        # self.commands.add(delete_server_command)
-        # self.commands.add(connect_server_command)
-        # self.commands.add(add_new_server_command)
-        # self.commands.add(upload_passwords_command)
-        # self.commands.add(download_passwords_command)
-        self.commands.add(migrate_passwords_command)
+        self.commands.clear()
+        self.commands.add(send_passwords_command)
         self.commands.add(get_app_details_command)
 
         self.paths.data.mkdir(parents=True, exist_ok=True)
@@ -403,24 +368,20 @@ class BastionPass(toga.App):
                 style=self.button_style
             )
 
-            home_widgets = {
-                "service_label": service_label,
-                "self.service_entry": self.service_entry,
-                "username_label": username_label,
-                "self.username_entry": self.username_entry,
-                "password_label": password_label,
-                "self.service_password_entry": self.service_password_entry,
-                "add_password_button": add_password_button,
-                "generate_password_button": generate_password_button,
-                "edit_password_button": edit_password_button,
-                "get_password_button": get_password_button,
-                "delete_service_button": delete_service_button,
-                "delete_username_button": delete_username_button,
-                "create_backup_phrase_button": create_backup_phrase_button
-            }
-
-            if toga.platform.current_platform.lower() == "android":
-                del home_widgets["create_backup_phrase_button"]
+            home_widgets = (
+                service_label,
+                self.service_entry,
+                username_label,
+                self.username_entry,
+                password_label,
+                self.service_password_entry,
+                add_password_button,
+                generate_password_button,
+                edit_password_button,
+                get_password_button,
+                delete_service_button,
+                delete_username_button
+            )
 
             add_to_screen(
                 widgets_to_add=home_widgets,
@@ -470,15 +431,15 @@ class BastionPass(toga.App):
             )
 
             add_to_screen(
-                widgets_to_add={
-                    "user_label": user_label,
-                    "self.user_entry": self.user_entry,
-                    "password_label": password_label,
-                    "self.password_entry": self.password_entry,
-                    "login_button": login_button,
-                    "create_user_button": create_user_button,
-                    "delete_user_button": delete_user_button
-                },
+                widgets_to_add=(
+                    user_label,
+                    self.user_entry,
+                    password_label,
+                    self.password_entry,
+                    login_button,
+                    create_user_button,
+                    delete_user_button
+                ),
                 box_to_add_to=self.a_box,
                 clear_screen=True
             )
@@ -502,10 +463,10 @@ class BastionPass(toga.App):
             )
 
         return add_to_screen(
-            widgets_to_add={
-                "data_path_label": data_path_label,
-                "return_to_home_button": return_to_home_button
-            },
+            widgets_to_add=(
+                data_path_label,
+                return_to_home_button
+            ),
             box_to_add_to=self.a_box,
             clear_screen=True
         )
@@ -605,11 +566,11 @@ class BastionPass(toga.App):
                 )
 
                 return add_to_screen(
-                    widgets_to_add={
-                        "backup_phrase_label": backup_phrase_label,
-                        "self.backup_phrase_entry": self.backup_phrase_entry,
-                        "recover_backup_phrase_button": recover_backup_phrase_button
-                    },
+                    widgets_to_add=(
+                        backup_phrase_label,
+                        self.backup_phrase_entry,
+                        recover_backup_phrase_button
+                    ),
                     box_to_add_to=self.a_box,
                     clear_screen=True
                 )
@@ -623,47 +584,14 @@ class BastionPass(toga.App):
         if user_data == {}:
             dialog = toga.ConfirmDialog(
                 title=self.confirm_title,
-                message="Saved passwords are corrupt. Attempt recovery from server?"
+                message="Saved passwords are corrupt. Attempt recovery from different device?"
             )
 
             dialog_result = await self.dialog(dialog)
 
             if dialog_result:
-                server_address_label = toga.Label(
-                    text="Server Address:",
-                    style=self.label_style
-                )
-
-                self.server_address_entry = toga.TextInput(
-                    style=self.input_style
-                )
-
-                server_port_label = toga.Label(
-                    text="Server Port:",
-                    style=self.label_style
-                )
-
-                self.server_port_entry = toga.TextInput(
-                    style=self.input_style
-                )
-
-                recover_passwords_button = toga.Button(
-                    text="Recover Passwords",
-                    on_press=self.download_passwords,
-                    style=self.button_style
-                )
-
-                add_to_screen(
-                    widgets_to_add={
-                        "server_address_label": server_address_label,
-                        "self.server_address_entry": self.server_address_entry,
-                        "server_port_label": server_port_label,
-                        "self.server_port_entry": self.server_port_entry,
-                        "recover_passwords_button": recover_passwords_button
-                    },
-                    box_to_add_to=self.a_box,
-                    clear_screen=True
-                )
+                pass
+                # TODO: Implement data receiving from different device
 
         if toga.platform.current_platform.lower() == "android":
             print("Running data decrypt for android")
@@ -688,8 +616,28 @@ class BastionPass(toga.App):
             )
 
         if password_correct == "Correct password entered":
+            from .background_server import BackgroundServer
+
+            app_side, server_side = multiprocessing.Pipe(duplex=True)
+
+            self.app_pipe = app_side
             self.logged_in_user = username
             self.data_file_path = Path(self.paths.data, self.logged_in_user, ".passwords.json")
+
+            print("Starting background server")
+
+            server_process = multiprocessing.Process(
+                target=BackgroundServer,
+                kwargs={
+                    "port": os.environ["PORT"],
+                    "username": self.logged_in_user,
+                    "data_path": self.data_file_path,
+                    "comms_pipe": self.app_pipe
+                }
+            )
+            server_process.start()
+
+            print(f"Started new process. PID is: {server_process.pid}")
 
             return self.return_to_home_screen()
 
@@ -839,7 +787,7 @@ class BastionPass(toga.App):
         await self.dialog(dialog)
         return None
 
-    # --------------------- Password related functions ---------------------#
+    # --------------------- Password related functions --------------------- #
 
     async def add_password(self, _):
         service = self.service_entry.value
@@ -900,7 +848,7 @@ class BastionPass(toga.App):
 
                 user_data["data"][service] = {
                     username: {
-                        "password": Fernet(password_key).encrypt(password.encode()).decode(),
+                        "password": cipher.encrypt(password.encode()).decode(),
                         "key": key_encryption["encrypted_data"],
                         "iv": key_encryption["iv_used"]
                     }
@@ -1363,202 +1311,14 @@ class BastionPass(toga.App):
         )
 
         add_to_screen(
-            widgets_to_add={
-                "backup_phrase_label": backup_phrase_label,
-                "next_button": next_button
-            },
+            widgets_to_add=(
+                backup_phrase_label,
+                next_button
+            ),
             box_to_add_to=self.a_box,
             clear_screen=True
         )
         return None
-
-    async def migrate_data(self, _=None, send_data=False, set_up_server=False):
-        if send_data:
-            user = self.logged_in_user
-            user_data = load_user_data(password_file_path=self.data_file_path)
-
-            if toga.platform.current_platform == "android":
-                main_key = None
-
-            else:
-                main_key = get_main_key()
-
-            if user_data == "Invalid data saved":
-                dialog = toga.ErrorDialog(
-                    title=self.error_title,
-                    message="Failed to migrate data. Cannot load user data"
-                )
-
-                await self.dialog(dialog)
-                return None
-
-            elif user_data == "Password file path doesn't exist":
-                dialog = toga.ErrorDialog(
-                    title=self.error_title,
-                    message="Failed to migrate data. User data file doesn't exist"
-                )
-
-                await self.dialog(dialog)
-                return None
-
-            user_data = json.dumps(user_data)
-
-            httpx.post(
-                f"http://{self.to_device_address_input.value}:{self.to_device_port_input.value}/{user}/{user_data}/{main_key}")
-            httpx.post(f"http://{self.to_device_address_input.value}:{self.to_device_port_input.value}/shutdown")
-
-            dialog = toga.InfoDialog(
-                title=self.success_title,
-                message="Successfully sent data to receiving device"
-            )
-
-            await self.dialog(dialog)
-            return self.return_to_home_screen()
-
-        if set_up_server:
-            from .migration_server import MigrationServer
-
-            print(send_data)
-
-            server = MigrationServer.set_up_server(
-                event_loop=self.loop,
-                port=self.server_port_entry.value
-            )
-
-            self.server_task = asyncio.create_task(server.serve())
-
-            dialog = toga.InfoDialog(
-                title=self.success_title,
-                message=f"Server has been successfully started. Server connection details: \n\nAvailable Addresses: {[psutil.net_if_addrs()[interface][0].address for interface in psutil.net_if_addrs().keys() if psutil.net_if_addrs()[interface][0].address != "127.0.0.1"]} \nPort listening on: {self.server_port_entry.value}"
-            )
-            print("Showing dialog")
-
-            await self.dialog(dialog)
-
-            print("Waiting for migration to complete")
-
-            while not hasattr(self, "migration_successful"):
-                await asyncio.sleep(10)
-
-            await asyncio.to_thread(load_env, env_path=Path(self.paths.data, ".env"), env_object=os.environ)
-
-            dialog = toga.InfoDialog(
-                title=self.success_title,
-                message="Successfully migrated data"
-            )
-
-            await self.dialog(dialog)
-            return self.return_to_home_screen()
-
-        dialog = toga.QuestionDialog(
-            title=self.confirm_title,
-            message="Do you want to receive or send data? Select 'No' to receive data, and 'Yes' to send data"
-        )
-
-        dialog_result = await self.dialog(dialog)
-
-        print(dialog_result)
-
-        if dialog_result:
-            print("Defining widgets")
-
-            to_device_address_label = toga.Label(
-                text="Please enter the address of the receiving device",
-                style=self.label_style
-            )
-
-            self.to_device_address_input = toga.TextInput(style=self.input_style)
-
-            to_device_port_label = toga.Label(
-                text="Please enter the port of the receiving device",
-                style=self.label_style
-            )
-
-            self.to_device_port_input = toga.TextInput(style=self.input_style)
-
-            send_data_button = toga.Button(
-                text="Send data to receiving device",
-                on_press=partial(self.migrate_data, send_data=True),
-                style=self.button_style
-            )
-
-            print("Adding widgets to screen")
-
-            add_to_screen(
-                widgets_to_add={
-                    "to_device_address_label": to_device_address_label,
-                    "self.to_device_address_input": self.to_device_address_input,
-                    "to_device_port_label": to_device_port_label,
-                    "self.to_device_port_input": self.to_device_port_input,
-                    "send_data_button": send_data_button
-                },
-                box_to_add_to=self.a_box,
-                clear_screen=True
-            )
-
-        else:
-            dialog = toga.QuestionDialog(
-                title=self.confirm_title,
-                message="THIS WILL REPLACE ALL PASSWORDS SAVED ON THIS DEVICE. Are you sure you want to continue?"
-            )
-
-            dialog_result = await self.dialog(dialog)
-
-            if dialog_result:
-                if set_up_server is False:
-                    all_nic_data = psutil.net_if_addrs()
-                    available_address = []
-
-                    for nic_name in all_nic_data:
-                        nic_data = all_nic_data[nic_name]
-
-                        if nic_data[0].broadcast is not None:
-                            available_address.append(nic_data[0].address)
-
-                    select_address_label = toga.Label(
-                        text="Please select an address below, or just leave it at the default",
-                        style=self.label_style
-                    )
-
-                    self.server_address_selection = toga.Selection(
-                        items=available_address,
-                        style=self.selection_style
-                    )
-
-                    server_port_label = toga.Label(
-                        text="Please enter a server port below, or leave it at the default",
-                        style=self.label_style
-                    )
-
-                    self.server_port_entry = toga.TextInput(
-                        value="9001",
-                        style=self.input_style
-                    )
-
-                    start_server_button = toga.Button(
-                        text="Start Server",
-                        on_press=partial(self.migrate_data, set_up_server=True)
-                    )
-
-                    return add_to_screen(
-                        widgets_to_add={
-                            "select_address_label": select_address_label,
-                            "self.server_address_selection": self.server_address_selection,
-                            "server_port_label": server_port_label,
-                            "self.server_port_entry": self.server_port_entry,
-                            "start_server_button": start_server_button
-                        },
-                        box_to_add_to=self.a_box,
-                        clear_screen=True
-                    )
-
-            else:
-                dialog = toga.InfoDialog(
-                    title=self.success_title,
-                    message="Data migration has been cancelled"
-                )
-
-                return await self.dialog(dialog)
 
     # --------------------- Utility related functions ---------------------#
 
@@ -1604,6 +1364,46 @@ class BastionPass(toga.App):
                 dialog_to_raise = None
 
         return True
+
+    # --------------------- Migration related functions --------------------- #
+
+    async def send_data(self, _, ready_to_send: bool = False):
+        if ready_to_send is False:
+            self.addresses_selection = toga.Selection(
+                items=[psutil.net_if_addrs()[interface][0].address for interface in psutil.net_if_addrs() if psutil.net_if_addrs()[interface][0].address != "127.0.0.1"],
+                style=self.selection_style
+            )
+
+            submit_address_button = toga.Button(
+                style=self.button_style,
+                text="Submit address",
+                on_press = partial(self.send_data, ready_to_send=True)
+            )
+
+            add_to_screen(
+                widgets_to_add=(
+                    self.addresses_selection,
+                    submit_address_button
+                ),
+                box_to_add_to=self.a_box,
+                clear_screen=True
+            )
+
+        else:
+            await asyncio.to_thread(
+                self.app_pipe.send,
+                f"COMMAND SEND ADDRESS {self.addresses_selection.value} PORT {os.environ['PORT']} PATH {self.data_file_path}"
+            )
+
+            await asyncio.to_thread(
+                self.app_pipe.send,
+                "DONE"
+            )
+
+            # self.app_pipe.send(f"COMMAND SEND ADDRESS {self.addresses_selection.value} PORT {os.environ['PORT']} PATH {self.data_file_path}"),
+            # self.app_pipe.send("DONE")
+
+            print(f"COMMAND SEND ADDRESS {self.addresses_selection.value} PORT {os.environ['PORT']}")
 
 
 def main():

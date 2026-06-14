@@ -33,14 +33,11 @@ def recover_key(backup_phrase: list) -> str:
     return recovered_key
 
 
-def add_to_screen(widgets_to_add: dict[str, toga.Widget], box_to_add_to: toga.Box, clear_screen: bool = False) -> str:
+def add_to_screen(widgets_to_add: tuple, box_to_add_to: toga.Box, clear_screen: bool = False) -> str:
     if clear_screen:
         box_to_add_to.clear()
 
-    for widget_title in widgets_to_add.keys():
-        widget_object = widgets_to_add[widget_title]
-
-        box_to_add_to.add(widget_object)
+    [box_to_add_to.add(widget) for widget in widgets_to_add]
 
     return "Added widgets to screen"
 
@@ -85,7 +82,7 @@ def create_new_user(user_data_path: str, user: str, password: str, main_cipher: 
     encryption_key = Fernet.generate_key()
     cipher = Fernet(encryption_key)
 
-    if os.path.exists(user_data_path):
+    if Path(user_data_path).exists():
         return "User already exists"
 
     if isinstance(main_cipher, Fernet):
@@ -287,3 +284,137 @@ def encrypt_data(data_to_encrypt: str or bytes, key_to_use: str ="main_key") -> 
             "encrypted_data": encrypted_data,
             "iv_used": None
         }
+
+def offset_user_data(user_data: dict):
+    offset_data = [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "g",
+        "h",
+        "i",
+        "j",
+        "k",
+        "l",
+        "m",
+        "n",
+        "o",
+        "p",
+        "q",
+        "r",
+        "s",
+        "t",
+        "u",
+        "v",
+        "w",
+        "x",
+        "y",
+        "z",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "0",
+        "_",
+        "!"
+    ]
+    offset_user_data = {}
+
+    decrypted_data = {}
+    data_offset = str(random.randint(1, len(offset_data)))
+
+    for service in user_data["data"]:
+        for username in user_data["data"][service]:
+            encryption_iv = user_data["data"][service][username]["iv"]
+            decrypted_key = decrypt_data(user_data["data"][service][username]["key"], iv=encryption_iv)
+            decrypted_password = Fernet(decrypted_key).decrypt(
+                user_data["data"][service][username]["password"]).decode()
+
+            if service in decrypted_data.keys():
+                decrypted_data[service][username] = {
+                    "password": decrypted_password,
+                    "key": decrypted_key,
+                    "iv": encryption_iv
+                }
+
+            else:
+                decrypted_data[service] = {
+                    username: {
+                        "password": decrypted_password,
+                        "key": decrypted_key,
+                        "iv": encryption_iv
+                    }
+                }
+
+    for service in decrypted_data:
+        offset_service = ""
+        offset_username = ""
+        offset_password = ""
+        offset_key = ""
+
+        for character in str(service):
+            offset_service += str(offset_data.index(character.lower()))
+
+            if character.isupper():
+                offset_service += "U"
+
+            offset_service += " "
+
+        print("Offset service")
+
+        for username in decrypted_data[service]:
+            for character in str(username):
+                offset_username += str(offset_data.index(character.lower()))
+
+                if character.isupper():
+                    offset_username += "U"
+
+                offset_username += " "
+
+            print("Offset username")
+
+            for character in str(decrypted_data[service][username]["password"]):
+                print(f"Password is: {decrypted_data[service][username]["password"]}")
+                print(f"Data offset is: {data_offset}")
+                print(f"Character is: {character}")
+
+                offset_password += str(offset_data.index(character.lower()))
+
+                if character.isupper():
+                    offset_password += "U"
+
+                offset_password += " "
+                print(offset_password)
+
+            print("Offset password")
+
+            for character in decrypted_data[service][username]["key"]:
+                character = str(character)
+                try:
+                    offset_key += str(offset_data.index(character.lower()))
+
+                    if character.isupper():
+                        offset_key += "U"
+
+                except ValueError:
+                    offset_key += str(character) + "!"
+
+                else:
+                    offset_key += " "
+
+            print("Offset key")
+
+            if offset_service in offset_user_data.keys():
+                offset_user_data[offset_service][offset_username] = {
+                    "password": offset_password,
+                    "key": offset_key,
+                    "iv": encryption_iv
+                }
