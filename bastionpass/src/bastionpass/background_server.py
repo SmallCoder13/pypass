@@ -1,36 +1,52 @@
-import httpx
+import asyncio
+import uvicorn
+import threading
 from .utils import *
-import multiprocessing
 from pathlib import Path
 from fastapi import FastAPI
-from threading import Thread
-from asyncio import new_event_loop
-from uvicorn import Config, Server
+from toga.app import App as BastionPass
 from toga.platform import current_platform
+from contextlib import asynccontextmanager
+
+def create_app(app_object):
+    @asynccontextmanager
+    async def app_lifespan(app):
+        asyncio.create_task(
+            asyncio.to_thread(
+                app_object.app_queue.put,
+                "'Lifespan thingy called'"
+            )
+        )
+        asyncio.create_task(app_object.message_listener())
+        asyncio.create_task(app_object.command_listener())
+
+        yield
+
+        app_object.shutdown_in_progress = True
+    return FastAPI(lifespan=app_lifespan)
 
 class BackgroundServer:
-    def __init__(self, port: int, data_path: Path, username: str, comms_pipe: multiprocessing.Pipe):
-        httpx.post("http://127.0.0.1:8000/'Background_server_called'")
+    def __init__(self, port: int, data_path: Path, username: str, server_queue: asyncio.Queue, app_queue: asyncio.Queue):
+        try:
 
-        self.comms_pipe: multiprocessing.Pipe = comms_pipe
-        self.is_command_complete: bool = False
-        self.server_loop = new_event_loop()
-        self.data_path: Path = data_path
-        self.username: str = username
-        self.fast_api = FastAPI()
-        self.command = {}
-        self.port = port
+            self.server_queue: asyncio.Queue = server_queue
+            self.app_queue: asyncio.Queue = app_queue
+            self.shutdown_in_progress: bool = False
+            self.is_command_complete: bool = False
+            self.data_path: Path = data_path
+            self.fast_api = create_app(self)
+            self.username: str = username
+            self.command = {}
+            self.port = port
 
-        httpx.post("http://127.0.0.1:8000/'Initialized_all_variables,_setting_up_server'")
+            self.app_queue.put_nowait("Adding endpoints")
+            self.add_endpoints()
 
-        self.event_listener_thread = Thread(target=self.message_listener)
-        self.event_listener_thread.start()
+            self.app_queue.put_nowait("Starting server")
+            self.start_server()
 
-        self.command_executor_thread = Thread(target=self.command_listener)
-        self.command_executor_thread.start()
-
-        self.add_endpoints()
-        self.start_server()
+        except Exception as e:
+            self.app_queue.put_nowait(f"Error {e}")
 
     def add_endpoints(self):
         self.fast_api.add_api_route(
@@ -46,12 +62,25 @@ class BackgroundServer:
         )
 
     def start_server(self):
+        """
+        Attempts to start background server. If server startup is successful, this function returns True. If an exception is thrown during startup, this function will return False
+        """
         try:
-            server_config = Config(app=self.fast_api, host="0.0.0.0", port=self.port)
-            server_task = self.server_loop.create_task(Server(config=server_config).serve())
+            threading.Thread(
+                target=uvicorn.run,
+                kwargs={
+                    "app": self.fast_api,
+                    "host": "0.0.0.0",
+                    "port": self.port
+                },
+                daemon=True
+            ).start()
+
+            return True
 
         except Exception as e:
-            httpx.post(f"http://127.0.0.1:8000/Error_{e}")
+            self.app_queue.put(f"Error {e}")
+            return False
 
     def receive_data(self, sending_address, data):
         pass
@@ -103,62 +132,64 @@ class BackgroundServer:
                         }
 
         except Exception as e:
-            httpx.post(f"http://127.0.0.1:8000/Error_{e}")
+            self.app_queue.put(f"Error {e}")
 
-    def command_listener(self):
-        try:
-            httpx.post("http://127.0.0.1:8000/'Started_command_executor'")
-
-            while True:
-                if self.is_command_complete is True:
-                    if self.command["COMMAND"] == "SEND":
-                        offset_data = offset_user_data(
-                            user_data=load_user_data(
-                                password_file_path=self.command["PATH"]
-                            )
+    async def command_listener(self):
+        while not self.shutdown_in_progress:
+            if self.is_command_complete is True:
+                if self.command["COMMAND"] == "SEND":
+                    offset_data = offset_user_data(
+                        user_data=load_user_data(
+                            password_file_path=self.command["PATH"]
                         )
+                    )
 
-                        self.send_data(
-                            offset_data=offset_data,
-                            receiving_port=self.command["PORT"],
-                            receiving_address=self.command["ADDRESS"]
-                        )
+                    self.send_data(
+                        offset_data=offset_data,
+                        receiving_port=self.command["PORT"],
+                        receiving_address=self.command["ADDRESS"]
+                    )
 
-                else:
-                    continue
+            else:
+                await asyncio.sleep(0.01)
+                continue
 
-        except Exception as e:
-            httpx.post(f"http://127.0.0.1:8000/Error_{e}")
-
-    def message_listener(self):
+    async def message_listener(self):
         try:
-            httpx.post("http://127.0.0.1:8000/'Started_message_listener'")
+            await self.app_queue.put("Started message listener")
+            message = ""
 
-            while True:
-                if not self.comms_pipe.poll(timeout=5):
-                    httpx.post("http://127.0.0.1:8000/'Poll timeout reached'")
-                    continue
+            while not self.shutdown_in_progress:
+                message += await self.server_queue.get()
+                # message = self.comms_pipe.get()
 
-                message = self.comms_pipe.recv()
-
-                httpx.post("http://127.0.0.1:8000/'Received_new_message'")
+                await self.app_queue.put("Received new message")
 
                 if isinstance(message, bytes):
                     message = message.decode()
                 else:
                     message = str(message)
 
-                httpx.post(f"http://127.0.0.1:8000/{message.replace(' ', '_')}")
+                await self.app_queue.put(message.replace(' ', '_'))
 
-                if message == "DONE":
+                if message[-4:] == "DONE":
                     self.is_command_complete = True
+                    message = ""
 
-                elif message != "DONE" and self.is_command_complete is True:
+                elif message[-4:] != "DONE" and self.is_command_complete is True:
                     self.is_command_complete = False
-                    self.command += message
+                    self.command.update(json_repair.loads(message))
+                    # self.command += message
+
+                elif message == "SHUTDOWN":
+                    self.shutdown_in_progress = True
+                    # self.event_listener_thread.join()
+                    # self.command_executor_thread.join()
+                    # self.server_loop.stop()
 
                 else:
-                    self.command += message
+                    self.command.update(json_repair.loads(message))
+                    # self.command += message
 
         except Exception as e:
-            httpx.post(f"http://127.0.0.1:8000/Error_{e}")
+            await self.app_queue.put(f"Error {e}")

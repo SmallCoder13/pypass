@@ -418,3 +418,91 @@ def offset_user_data(user_data: dict):
                     "key": offset_key,
                     "iv": encryption_iv
                 }
+
+def import_from_file(path: Path, file_pattern: list):
+    """
+    Import passwords from a given file
+    Parameters:
+        path: Path - The file path of the file to import passwords from
+        file_pattern: list - The pattern to look for, e.g.:
+            [
+                "ignore"
+                "service"
+                "username"
+                "password"
+                "ignore"
+            ]
+    """
+
+    if path is None or not path.exists():
+        return "Path nonexistent"
+
+    with open(path) as import_file:
+        file_data = import_file.readlines()
+
+    service: str = ""
+    username: str = ""
+    password: str = ""
+    imported_data: dict = {}
+    position_in_pattern: int = 0
+
+    for line in file_data:
+        line_role = file_pattern[position_in_pattern]
+
+        print("Line role: " + line_role)
+        print("Line is: " + line)
+
+        if position_in_pattern + 1 == len(file_pattern):
+            position_in_pattern = 0
+
+        else:
+            position_in_pattern += 1
+
+        if line_role == "ignore":
+            print(f"Imported data so far is: {imported_data}")
+
+            service = ""
+            username = ""
+            password = ""
+            continue
+        else:
+            if line_role == "service":
+                service = line
+            elif line_role == "username":
+                username = line
+            elif line_role == "password":
+                password = line
+
+                if service not in imported_data.keys():
+                    imported_data[service] = {
+                        username: password
+                    }
+
+                else:
+                    imported_data[service][username] = password
+
+
+    return imported_data
+
+def create_backup_phrase(phrase: str, wordlist: dict) -> list:
+    backup_phrase = []
+    index = 1
+
+    for character in phrase:
+        if character.isnumeric() is True or character == "-" or character == "=" or character == "_":
+            string_to_append = character
+
+        elif character.isupper():
+            string_to_append = wordlist[character.upper()] + "!"
+
+        else:
+            string_to_append = wordlist[character.upper()]
+
+        if not phrase.index(character) % 3 == 0:
+            string_to_append += "    "
+
+        backup_phrase.append(string_to_append)
+
+        index += 1
+
+    return backup_phrase

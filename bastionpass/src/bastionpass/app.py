@@ -3,7 +3,6 @@ A cross-platform password manager written in python
 """
 import json
 
-import json_repair
 # Data Structure
 
 # /
@@ -33,7 +32,6 @@ import toga
 from toga.style import Pack
 
 # App related imports
-import random
 import os.path
 import asyncio
 import secrets
@@ -47,7 +45,7 @@ from cryptography.fernet import Fernet
 # Data migration imports
 # import httpx
 import psutil
-import multiprocessing
+# import multiprocessing
 
 from pprint import pprint as print
 
@@ -84,6 +82,8 @@ class BastionPass(toga.App):
         else:
             self.main_fernet: Fernet = Fernet(get_main_key())
 
+        self.loop.create_task(self.server_message_listener())
+
     def startup(self):
         """Construct and show the Toga application.
 
@@ -92,16 +92,16 @@ class BastionPass(toga.App):
         show the main window.
         """
 
-        main_box = toga.Box(
+        main_box = toga.ScrollContainer(
             style=Pack(
                 direction="column",
                 align_items="center",
-                justify_content="start"
             )
         )
 
         self.error_title = "Oh No!"
         self.success_title = "Yay!"
+        self.warning_title = "Ok..."
         self.confirm_title = "Confirm?"
 
         self.logged_in_user = None
@@ -224,21 +224,9 @@ class BastionPass(toga.App):
             )
         )
 
-        add_to_screen(
-            widgets_to_add=(
-                user_label,
-                self.user_entry,
-                password_label,
-                self.password_entry,
-                login_button,
-                create_user_button,
-                delete_user_button
-            ),
-            box_to_add_to=self.a_box,
-            clear_screen=True
-        )
+        self.return_to_home_screen(logged_in=False)
 
-        main_box.add(self.a_box)
+        main_box.content = self.a_box
 
         self.commands.clear()
         self.commands.add(send_passwords_command)
@@ -246,8 +234,13 @@ class BastionPass(toga.App):
 
         self.paths.data.mkdir(parents=True, exist_ok=True)
         self.paths.logs.mkdir(parents=True, exist_ok=True)
+        # multiprocessing.set_start_method("spawn")
 
-        self.main_window = toga.MainWindow(title=self.formal_name)
+        self.main_window = toga.MainWindow(
+            title=self.formal_name,
+            on_close=self.on_close_handler
+        )
+
         self.main_window.content = main_box
         self.main_window.show()
 
@@ -362,26 +355,51 @@ class BastionPass(toga.App):
                 style=self.button_style
             )
 
+            import_passwords_from_file = toga.Button(
+                text="Import Password from File",
+                on_press=self.import_from_file,
+                style=self.button_style
+            )
+
             create_backup_phrase_button = toga.Button(
                 text="Create backup phrase",
                 on_press=self.create_backup_phrase,
                 style=self.button_style
             )
 
-            home_widgets = (
-                service_label,
-                self.service_entry,
-                username_label,
-                self.username_entry,
-                password_label,
-                self.service_password_entry,
-                add_password_button,
-                generate_password_button,
-                edit_password_button,
-                get_password_button,
-                delete_service_button,
-                delete_username_button
-            )
+            if toga.platform.current_platform == "android":
+                home_widgets = (
+                    service_label,
+                    self.service_entry,
+                    username_label,
+                    self.username_entry,
+                    password_label,
+                    self.service_password_entry,
+                    add_password_button,
+                    generate_password_button,
+                    edit_password_button,
+                    get_password_button,
+                    delete_service_button,
+                    delete_username_button
+                )
+
+            else:
+                home_widgets = (
+                    service_label,
+                    self.service_entry,
+                    username_label,
+                    self.username_entry,
+                    password_label,
+                    self.service_password_entry,
+                    add_password_button,
+                    generate_password_button,
+                    edit_password_button,
+                    get_password_button,
+                    delete_service_button,
+                    delete_username_button,
+                    create_backup_phrase_button,
+                    import_passwords_from_file
+                )
 
             add_to_screen(
                 widgets_to_add=home_widgets,
@@ -618,26 +636,29 @@ class BastionPass(toga.App):
         if password_correct == "Correct password entered":
             from .background_server import BackgroundServer
 
-            app_side, server_side = multiprocessing.Pipe(duplex=True)
+            self.server_queue = asyncio.Queue()
+            self.app_queue = asyncio.Queue()
+            # app_side, server_side = multiprocessing.Pipe(duplex=True)
 
-            self.app_pipe = app_side
+            # self.server_loop = self.loop.create_task(
+            #     asyncio.new_event_loop().run_until_complete()
+            # )
+
             self.logged_in_user = username
             self.data_file_path = Path(self.paths.data, self.logged_in_user, ".passwords.json")
 
-            print("Starting background server")
+            print("Setting up/Starting background server")
 
-            server_process = multiprocessing.Process(
-                target=BackgroundServer,
-                kwargs={
-                    "port": os.environ["PORT"],
-                    "username": self.logged_in_user,
-                    "data_path": self.data_file_path,
-                    "comms_pipe": self.app_pipe
-                }
+            self.loop.create_task(
+                asyncio.to_thread(
+                    BackgroundServer,
+                    app_queue=self.app_queue,
+                    port=int(os.environ["PORT"]),
+                    username=self.logged_in_user,
+                    data_path=self.data_file_path,
+                    server_queue=self.server_queue,
+                )
             )
-            server_process.start()
-
-            print(f"Started new process. PID is: {server_process.pid}")
 
             return self.return_to_home_screen()
 
@@ -1230,61 +1251,81 @@ class BastionPass(toga.App):
         print(self.service_password_entry.value)
 
     async def create_backup_phrase(self, _):
-        user_data = load_user_data(password_file_path=self.data_file_path)
+        # user_data = load_user_data(password_file_path=self.data_file_path)
+        #
+        # if user_data == "Invalid data saved":
+        #     dialog = toga.ErrorDialog(
+        #         title=self.error_title,
+        #         message="Failed to create backup phrase. Cannot load user data"
+        #     )
+        #
+        #     await self.dialog(dialog)
+        #     return None
+        #
+        # elif user_data == "Password file path doesn't exist":
+        #     dialog = toga.ErrorDialog(
+        #         title=self.error_title,
+        #         message="Failed to create backup phrase. User data file doesn't exist"
+        #     )
+        #
+        #     await self.dialog(dialog)
+        #     return None
 
-        if user_data == "Invalid data saved":
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="Failed to create backup phrase. Cannot load user data"
+        try:
+            dialog = toga.SaveFileDialog(
+                title="Main key backup phrase save path",
+                suggested_filename="bastionpass_backup_phrase.json",
+                file_types=["json"]
             )
 
-            await self.dialog(dialog)
-            return None
+            file_path = await self.dialog(dialog)
 
-        elif user_data == "Password file path doesn't exist":
-            dialog = toga.ErrorDialog(
-                title=self.error_title,
-                message="Failed to create backup phrase. User data file doesn't exist"
+        except NotImplemented:
+            able_to_save_to_file: bool = False
+
+        else:
+            able_to_save_to_file: bool = True
+
+        if file_path is None:
+            dialog = toga.InfoDialog(
+                title=self.success_title,
+                message="Canceled backup phrase creation"
             )
 
-            await self.dialog(dialog)
-            return None
+            return await self.dialog(dialog)
 
-        user_key: str = self.main_fernet.decrypt(user_data["key"]).decode()
-        backup_phrase = []
+        main_key: str = get_main_key()
+        user_key: str = decrypt_data(
+            load_user_data(
+                self.data_file_path
+            )["key"].encode()
+        )
 
-        print(user_key)
+        print(main_key)
 
-        index = 1
-        for character in user_key:
-            if character.isnumeric() is True or character == "-" or character == "=" or character == "_":
-                string_to_append = character
+        main_backup_phrase = create_backup_phrase(
+            phrase=main_key,
+            wordlist=self.backup_words
+        )
 
-            elif character.isupper():
-                string_to_append = self.backup_words[character.upper()] + "!"
-
-            else:
-                string_to_append = self.backup_words[character.upper()]
-
-            if not user_key.index(character) % 3 == 0:
-                string_to_append += "    "
-
-            backup_phrase.append(string_to_append)
-
-            index += 1
+        user_backup_phrase = create_backup_phrase(
+            phrase=user_key,
+            wordlist=self.backup_words
+        )
 
         phrase_copy_safe = []
-        for word in backup_phrase:
+        for word in main_backup_phrase:
             word = word.replace(" ", "")
             word += "/"
 
             phrase_copy_safe.append(word)
             print(word)
 
-        copy_result = copy_to_clipboard(
-            str(phrase_copy_safe).replace("[", "").replace("]", "").replace(",", "").replace("'", ""))
+        if able_to_save_to_file is False:
+            copy_result = copy_to_clipboard(
+                str(phrase_copy_safe).replace("[", "").replace("]", "").replace(",", "").replace("'", ""))
 
-        if copy_result == "Can't copy to clipboard. Unsupported OS":
+        if able_to_save_to_file is False and copy_result == "Can't copy to clipboard. Unsupported OS":
             backup_phrase_label = toga.Label(
                 text=textwrap.fill(text=f"Your backup phrase is: \n\n{str(phrase_copy_safe)}"
                                         "\n\nSAVE THIS SOMEWHERE ELSE!!! If your key gets lost, you will not be able to recover it without"
@@ -1293,7 +1334,7 @@ class BastionPass(toga.App):
                 style=self.label_style
             )
 
-        else:
+        elif able_to_save_to_file is False and copy_result == "Successfully copied to clipboard":
             backup_phrase_label = toga.Label(
                 text=textwrap.fill(f"Your backup phrase has been copied to your clipboard."
                                    "\n\nSAVE THIS SOMEWHERE ELSE!!! If your key gets lost, you will not be able to recover it without"
@@ -1302,23 +1343,48 @@ class BastionPass(toga.App):
                 style=self.label_style
             )
 
+        elif able_to_save_to_file:
+            if Path(file_path).exists():
+                dialog = toga.ErrorDialog(
+                    title=self.error_title,
+                    message="Unable to save backup phrase to file. Selected path already exists"
+                )
+
+                return await self.dialog(dialog)
+
+            writable_backup_phrase = {
+                "main_key": tuple(main_backup_phrase),
+                "user_key": tuple(user_backup_phrase)
+            }
+
+            with open(Path(file_path), mode="w") as back_file:
+                json.dump(writable_backup_phrase, back_file, indent=4)
+
         print(self.main_window.size)
 
-        next_button = toga.Button(
-            text="Continue to home",
-            on_press=self.return_to_home_screen,
-            style=self.button_style
-        )
+        if able_to_save_to_file is False:
+            next_button = toga.Button(
+                text="Continue to home",
+                on_press=self.return_to_home_screen,
+                style=self.button_style
+            )
 
-        add_to_screen(
-            widgets_to_add=(
-                backup_phrase_label,
-                next_button
-            ),
-            box_to_add_to=self.a_box,
-            clear_screen=True
-        )
-        return None
+            return add_to_screen(
+                widgets_to_add=(
+                    backup_phrase_label,
+                    next_button
+                ),
+                box_to_add_to=self.a_box,
+                clear_screen=True
+            )
+
+        else:
+            dialog = toga.InfoDialog(
+                title=self.success_title,
+                message=f"Successfully created backup phrase. It has been saved to this file: \n\n{file_path}"
+            )
+
+            return await self.dialog(dialog)
 
     # --------------------- Utility related functions ---------------------#
 
@@ -1367,6 +1433,219 @@ class BastionPass(toga.App):
 
     # --------------------- Migration related functions --------------------- #
 
+    async def import_from_file(self, _=None, show_path_dialog: bool=False, save_passwords: bool=False):
+        if show_path_dialog:
+
+            file_path_dialog = toga.OpenFileDialog(
+                title="Select file to import passwords from",
+                file_types=["txt"]
+            )
+
+            file_path: Path = await self.dialog(file_path_dialog)
+
+            imported_data = import_from_file(
+                path=file_path,
+                file_pattern=self.data_pattern_input.value.split("\n")
+            )
+
+            if imported_data == "Path nonexistent":
+                await self.dialog(
+                    toga.ErrorDialog(
+                        title=self.error_title,
+                        message="Unable to import password from file. Provided file doesn't exist"
+                    )
+                )
+
+            imported_data_label = toga.Label(
+                text="The imported data is listed below. Does everything look right?",
+                style=self.label_style
+            )
+
+            self.imported_data_input = toga.MultilineTextInput(
+                style=self.input_style
+            )
+
+            for service in imported_data.keys():
+                for username in imported_data[service].keys():
+                    self.imported_data_input.value += f"Service: {service} \nUsername: {username} \nPassword: {imported_data[service][username]} \n\n"
+
+            conflicting_usernames_box = toga.Box(
+                style=Pack(
+                    direction="row",
+                    justify_content="center"
+                )
+            )
+
+            self.old_alignment = self.a_box.style.align_items
+            self.a_box.style.align_items = "center"
+
+            keep_current_username_label = toga.Label(
+                text="Keep any conflicting usernames same as already saved"
+            )
+
+            self.conflicting_username_toggle = toga.Switch(
+                text=""
+            )
+
+            replace_with_imported_username_label = toga.Label(
+                text="Replace any conflicting usernames with imported username"
+            )
+
+            save_passwords_button = toga.Button(
+                text="Save imported passwords",
+                on_press=partial(
+                    self.import_from_file,
+                    save_passwords=True
+                )
+            )
+
+            add_to_screen(
+                widgets_to_add=(
+                    keep_current_username_label,
+                    self.conflicting_username_toggle,
+                    replace_with_imported_username_label
+                ),
+                box_to_add_to=conflicting_usernames_box
+            )
+
+            add_to_screen(
+                widgets_to_add=(
+                    imported_data_label,
+                    self.imported_data_input,
+                    conflicting_usernames_box,
+                    save_passwords_button
+                ),
+                box_to_add_to=self.a_box,
+                clear_screen=True
+            )
+
+        elif save_passwords:
+            passwords_to_save: list[str] = self.imported_data_input.value.split("\n")
+            del passwords_to_save[-2:]
+
+            reformatted_passwords_to_save: dict = {}
+
+            print(f"Passwords to save is: {passwords_to_save}")
+
+            service: str = ""
+            username: str = ""
+            password: str = ""
+
+            for line in passwords_to_save:
+                if line == "":
+                    service = ""
+                    username = ""
+                    password = ""
+                    continue
+                elif line[-1] == " ":
+                    line = line[:-1]
+
+                if line[:9] == "Service: ":
+                    service = line.replace("Service: ", "").replace("\n", "")
+                elif line[:10] == "Username: ":
+                    username = line.replace("Username: ", "").replace("\n", "")
+                elif line[:10] == "Password: ":
+                    password = line.replace("Password: ", "").replace("\n", "")
+
+                if service == "" or username == "" or password == "":
+                    continue
+
+                encryption_key = Fernet.generate_key()
+                encrypted_key, encryption_iv =  encrypt_data(encryption_key.decode()).values()
+
+                if service in reformatted_passwords_to_save.keys():
+                    reformatted_passwords_to_save[service][username] = {
+                        "password": Fernet(encryption_key).encrypt(password.encode()).decode(),
+                        "key": encrypted_key.decode()
+                    }
+
+                else:
+                    reformatted_passwords_to_save[service] = {
+                        username: {
+                            "password": Fernet(encryption_key).encrypt(password.encode()).decode(),
+                            "key": encrypted_key.decode()
+                        }
+                    }
+
+                if encryption_iv is not None:
+                    reformatted_passwords_to_save[service][username]["iv"] = encryption_iv
+
+            print(reformatted_passwords_to_save)
+
+            saved_passwords: dict or str = load_user_data(password_file_path=self.data_file_path)
+
+            if isinstance(saved_passwords, str):
+                dialog = toga.ErrorDialog(
+                    title=self.error_title,
+                    message="Unable to load saved passwords. " + saved_passwords
+                )
+
+                await self.dialog(dialog)
+                return None
+
+            for imported_service in reformatted_passwords_to_save.keys():
+                for imported_username in reformatted_passwords_to_save[imported_service].keys():
+                    if (imported_service in saved_passwords["data"].keys()) and (imported_username in saved_passwords["data"][imported_service].keys()):
+                        if self.conflicting_username_toggle.value:
+                            saved_passwords["data"][imported_service][imported_username] = reformatted_passwords_to_save[imported_service][imported_username]
+
+                        else:
+                            continue
+                    elif imported_service in saved_passwords["data"].keys():
+                        saved_passwords["data"][imported_service][imported_username] = reformatted_passwords_to_save[imported_service][imported_username]
+
+                    elif imported_service not in saved_passwords["data"].keys():
+                        saved_passwords["data"][imported_service] = reformatted_passwords_to_save[imported_service]
+
+                    else:
+                        dialog = toga.InfoDialog(
+                            title=self.warning_title,
+                            message="Unknown situation has occurred while saving imported passwords"
+                        )
+
+                        await self.dialog(dialog)
+
+            with open(self.data_file_path, mode="w") as passwords_file:
+                json.dump(saved_passwords, passwords_file, indent=4)
+
+            dialog = toga.InfoDialog(
+                title=self.success_title,
+                message="Successfully imported data from selected file"
+            )
+
+            await self.dialog(dialog)
+
+            return self.return_to_home_screen()
+
+        else:
+            pattern_label = toga.Label(
+                text="Please enter the pattern of your password file below: \nE.g.: \nservice\nusername\npassword",
+                style=self.label_style
+            )
+
+            self.data_pattern_input = toga.MultilineTextInput(
+                placeholder="service\nusername\npassword",
+                style=self.input_style
+            )
+
+            file_select_button = toga.Button(
+                text="Select password file",
+                on_press=partial(
+                    self.import_from_file,
+                    show_path_dialog=True
+                )
+            )
+
+            add_to_screen(
+                widgets_to_add=(
+                    pattern_label,
+                    self.data_pattern_input,
+                    file_select_button
+                ),
+                box_to_add_to=self.a_box,
+                clear_screen=True
+            )
+
     async def send_data(self, _, ready_to_send: bool = False):
         if ready_to_send is False:
             self.addresses_selection = toga.Selection(
@@ -1391,20 +1670,75 @@ class BastionPass(toga.App):
 
         else:
             await asyncio.to_thread(
-                self.app_pipe.send,
-                f"COMMAND SEND ADDRESS {self.addresses_selection.value} PORT {os.environ['PORT']} PATH {self.data_file_path}"
-            )
-
-            await asyncio.to_thread(
-                self.app_pipe.send,
-                "DONE"
+                self.server_queue.put,
+                f"COMMAND SEND ADDRESS {self.addresses_selection.value} PORT {os.environ['PORT']} PATH {self.data_file_path} DONE"
             )
 
             # self.app_pipe.send(f"COMMAND SEND ADDRESS {self.addresses_selection.value} PORT {os.environ['PORT']} PATH {self.data_file_path}"),
             # self.app_pipe.send("DONE")
 
-            print(f"COMMAND SEND ADDRESS {self.addresses_selection.value} PORT {os.environ['PORT']}")
+            print(f"COMMAND SEND ADDRESS {self.addresses_selection.value} PORT {os.environ['PORT']} DONE")
 
+    # --------------------- Background functions --------------------- #
+    async def server_message_listener(self):
+        message_complete: bool = False
+        message_from_server: str = ""
+
+        while True:
+            if self.logged_in_user:
+                print(f"App queue empty: {self.app_queue.empty()}")
+                message_from_server += await self.app_queue.get()
+
+                print(f"Message from server: {message_from_server}")
+
+                if isinstance(message_from_server, bytes):
+                    message_from_server = message_from_server.decode()
+
+                elif not isinstance(message_from_server, str):
+                    message_from_server = str(message_from_server)
+
+                if message_from_server[-4:] == "DONE":
+                    message_complete = True
+
+                elif message_from_server[-4:] != "DONE" and message_complete is True:
+                    message_complete = False
+
+                else:
+                    continue
+
+            else:
+                await asyncio.sleep(0.01)
+                continue
+
+    # --------------------- Handler functions --------------------- #
+    def on_close_handler(self, *args, **kwargs) -> bool:
+        print("on_close_handler called")
+
+        window_can_close: bool
+
+        if self.logged_in_user:
+            asyncio.run_coroutine_threadsafe(
+                self.server_queue.put("SHUTDOWN"),
+                self.loop
+            )
+            self.app_queue.shutdown()
+
+            try:
+                if self.server_queue.empty:
+                    window_can_close = True
+
+                else:
+                    self.server_queue.shutdown(immediate=True)
+                    window_can_close = True
+
+            except AttributeError:
+                window_can_close = True
+
+        else:
+            window_can_close = True
+
+        print(f"Can window close? {window_can_close}")
+        return window_can_close
 
 def main():
     return BastionPass()

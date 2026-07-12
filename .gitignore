@@ -6,7 +6,6 @@ bastionpass/venv/
 bastionpass/logs/
 bastionpass/.venv/
 bastionpass/build/
-bastionpass/CHANGELOG
 bastionpass/.briefcase/
 bastionpass/.python-version
 bastionpass/tests/__pycache__/

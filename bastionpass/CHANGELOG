@@ -1,0 +1,37 @@
+# Bastion Pass Release Notes
+
+## 1.0.0 (16 May 2026)
+* Update README.md file
+* Rename PyPass to Bastion Pass
+* Update Buy me a Coffee link to new username
+* Fix background server so user can now login
+
+## 1.0.0 (06 June 2026)
+* Started fixing migration server
+
+## 1.0.0 (07 June 2026)
+* Set up framework for data migration into background server
+
+## 1.0.0 (12 June 2026)
+* Start adding sending data functionality into background server
+* Simplify add_to_screen function
+* Temporarily disable backup phrase creation
+
+## 1.0.0 (04 July 2026)
+* Fix server event loop being blocked, triggering constant warning in console
+
+## 1.0.0 (08 July 2026)
+* Replaced httpx and debug server with message listener inside of app
+* Fix background server so app can start it on startup, and doesn't block app thread
+
+## 1.0.0 (09 July 2026)
+* Layout most of the UI for importing passwords from files
+* Start working on the import passwords from files functionality
+
+## 1.0.0 (10 July 2026)
+* Work on functionality for importing passwords from files
+
+## 1.0.0 (11 July 2026)
+* Finish up functionality for importing passwords from files
+* Fix create backup phrase for desktop OS's, so now the backup phrase is automatically written to the selected file
+* Remove CHANGELOG.md from .gitignore
