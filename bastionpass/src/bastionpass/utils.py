@@ -433,54 +433,100 @@ def import_from_file(path: Path, file_pattern: list):
                 "ignore"
             ]
     """
-
     if path is None or not path.exists():
         return "Path nonexistent"
 
     with open(path) as import_file:
         file_data = import_file.readlines()
 
+    pattern_header: str = ""
+    pattern_footer: str = ""
+
+    for pattern_item in file_pattern:
+        if "header" in pattern_item:
+            pattern_header: str = str(pattern_item.split(" ")[1:]).replace("[", "").replace("]", "").replace(",", "").replace("'", "")
+            break
+
+    for pattern_item in file_pattern:
+        if "footer" in pattern_item:
+            pattern_footer = str(pattern_item.split(" ")[1:]).replace("[", "").replace("]", "").replace(",", "").replace("'", "")
+            break
+
+    ready_to_continue: bool = False
+
     service: str = ""
     username: str = ""
     password: str = ""
+
     imported_data: dict = {}
     position_in_pattern: int = 0
 
     for line in file_data:
-        line_role = file_pattern[position_in_pattern]
+        print(f"Ready to continue value: {ready_to_continue}")
+        print(f"Header value: {pattern_header}")
+        print(f"Footer value: {pattern_footer}")
+        print(f"Line value: {line}")
 
-        print("Line role: " + line_role)
-        print("Line is: " + line)
+        print(f"Header isn't empty string: {pattern_header != ''}")
+        print(f"Line is equal in header: {str(line) == str(pattern_header)}")
+        print(f"Header isn't an empty string and line equals header: {pattern_header != "" and line == pattern_header}")
 
-        if position_in_pattern + 1 == len(file_pattern):
-            position_in_pattern = 0
-
-        else:
-            position_in_pattern += 1
-
-        if line_role == "ignore":
-            print(f"Imported data so far is: {imported_data}")
-
-            service = ""
-            username = ""
-            password = ""
+        if pattern_header != "" and line == pattern_header:
+            # Header has been supplied and header has been reached in file
+            ready_to_continue = True
             continue
+
+        elif pattern_header == "":
+            # No header has been supplied, rely on ignore to determine what lines to ignore
+            ready_to_continue = True
+
+        elif pattern_header != "" and line != pattern_header:
+            # Header has been supplied, but not reached yet
+            continue
+
         else:
-            if line_role == "service":
-                service = line
-            elif line_role == "username":
-                username = line
-            elif line_role == "password":
-                password = line
+            continue
 
-                if service not in imported_data.keys():
-                    imported_data[service] = {
-                        username: password
-                    }
+        if ready_to_continue:
+            line_role = file_pattern[position_in_pattern]
 
-                else:
-                    imported_data[service][username] = password
+            print("Line role: " + line_role)
+            print("Line is: " + line)
 
+            if position_in_pattern + 1 == len(file_pattern):
+                position_in_pattern = 0
+
+            else:
+                position_in_pattern += 1
+
+            if line_role == "ignore":
+                print(f"Imported data so far is: {imported_data}")
+
+                service = ""
+                username = ""
+                password = ""
+                continue
+            else:
+                if line_role == "service":
+                    service = line
+                elif line_role == "username":
+                    username = line
+                elif line_role == "password":
+                    password = line
+
+                    # Footer has not been supplied or footer has been supplied and reached
+                    if pattern_footer == "" or (pattern_footer != "" and line == pattern_footer):
+                        if service not in imported_data.keys():
+                            imported_data[service] = {
+                                username: password
+                            }
+
+                        else:
+                            imported_data[service][username] = password
+
+                    else:
+                        ready_to_continue = False
+                        continue
 
     return imported_data
 

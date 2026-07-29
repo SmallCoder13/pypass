@@ -35,3 +35,8 @@
 * Finish up functionality for importing passwords from files
 * Fix create backup phrase for desktop OS's, so now the backup phrase is automatically written to the selected file
 * Remove CHANGELOG.md from .gitignore
+
+## 1.0.0 (29 July 2026)
+* Fix layout so content is now centered
+* Remove duplicate definition of home widgets
+* Work on trying to get background server to start

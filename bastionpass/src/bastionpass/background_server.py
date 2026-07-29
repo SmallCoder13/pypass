@@ -11,12 +11,12 @@ from contextlib import asynccontextmanager
 def create_app(app_object):
     @asynccontextmanager
     async def app_lifespan(app):
-        asyncio.create_task(
-            asyncio.to_thread(
-                app_object.app_queue.put,
-                "'Lifespan thingy called'"
-            )
-        )
+        # asyncio.create_task(
+        #     asyncio.to_thread(
+        #         app_object.app_queue.put,
+        #         "'Lifespan thingy called'"
+        #     )
+        # )
         asyncio.create_task(app_object.message_listener())
         asyncio.create_task(app_object.command_listener())
 
@@ -43,23 +43,34 @@ class BackgroundServer:
             self.add_endpoints()
 
             self.app_queue.put_nowait("Starting server")
-            self.start_server()
+            server_started = self.start_server()
+
+            if not server_started:
+                raise Exception("Server didn't successfully start")
 
         except Exception as e:
             self.app_queue.put_nowait(f"Error {e}")
 
     def add_endpoints(self):
-        self.fast_api.add_api_route(
-            path="/receive_data/{sending_address}/{data}",
-            endpoint=self.receive_data,
-            methods=["POST"]
-        )
+        try:
+            self.app_queue.put_nowait("Adding first and second route")
 
-        self.fast_api.add_api_route(
-            path="/send_data/{receiving_address}/{data}",
-            endpoint=self.send_data,
-            methods=["POST"]
-        )
+            self.fast_api.add_api_route(
+                path="/receive_data/{sending_address}/{data}",
+                endpoint=self.receive_data,
+                methods=["POST"]
+            )
+
+            self.fast_api.add_api_route(
+                path="/send_data/{receiving_address}/{data}",
+                endpoint=self.send_data,
+                methods=["POST"]
+            )
+
+        except Exception as e:
+            self.app_queue.put_nowait(f"Error: {e}")
+
+        return None
 
     def start_server(self):
         """
@@ -79,7 +90,7 @@ class BackgroundServer:
             return True
 
         except Exception as e:
-            self.app_queue.put(f"Error {e}")
+            self.app_queue.put_nowait(f"Error {e}")
             return False
 
     def receive_data(self, sending_address, data):
@@ -132,7 +143,7 @@ class BackgroundServer:
                         }
 
         except Exception as e:
-            self.app_queue.put(f"Error {e}")
+            self.app_queue.put_nowait(f"Error {e}")
 
     async def command_listener(self):
         while not self.shutdown_in_progress:

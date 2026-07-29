@@ -92,13 +92,6 @@ class BastionPass(toga.App):
         show the main window.
         """
 
-        main_box = toga.ScrollContainer(
-            style=Pack(
-                direction="column",
-                align_items="center",
-            )
-        )
-
         self.error_title = "Oh No!"
         self.success_title = "Yay!"
         self.warning_title = "Ok..."
@@ -157,76 +150,37 @@ class BastionPass(toga.App):
         )
 
         self.selection_style = Pack(
-            margin_top=10,
-            margin_bottom=10
+            margin=10,
+            text_align="center"
         )
 
         self.label_style = Pack(
-            margin_top=10,
-            margin_bottom=10,
+            margin=10,
+            text_align="center"
         )
 
         self.input_style = Pack(
-            margin_top=10,
-            margin_bottom=10
+            margin=10,
+            text_align="center"
         )
 
         self.button_style = Pack(
-            margin_top=10,
-            margin_bottom=10,
-        )
-
-        user_label = toga.Label(
-            text="User:",
-            style=self.label_style
-        )
-
-        self.user_entry = toga.TextInput(
-            style=self.input_style
-        )
-
-        password_label = toga.Label(
-            text="Password:",
-            style=self.label_style
-        )
-
-        self.password_entry = toga.TextInput(
-            style=self.input_style
-        )
-
-        login_button = toga.Button(
-            text="Login",
-            on_press=self.login,
-            style=self.button_style
-        )
-
-        create_user_button = toga.Button(
-            text="Create User",
-            on_press=self.create_user,
-            style=self.button_style
-        )
-
-        delete_user_button = toga.Button(
-            text="Delete User",
-            on_press=self.delete_user,
-            style=Pack(
-                margin_top=10,
-                margin_bottom=10,
-                background_color="red"
-            )
+            margin=10,
+            text_align="center"
         )
 
         self.a_box = toga.Box(
             style=Pack(
+                flex=1,
                 direction="column",
                 align_items="center",
-                width=10
+                justify_content="center"
             )
         )
 
         self.return_to_home_screen(logged_in=False)
 
-        main_box.content = self.a_box
+        main_scroll = toga.ScrollContainer(content=self.a_box)
 
         self.commands.clear()
         self.commands.add(send_passwords_command)
@@ -241,7 +195,7 @@ class BastionPass(toga.App):
             on_close=self.on_close_handler
         )
 
-        self.main_window.content = main_box
+        self.main_window.content = main_scroll
         self.main_window.show()
 
     async def recover_key(self, _):
@@ -442,8 +396,8 @@ class BastionPass(toga.App):
                 text="Delete User",
                 on_press=self.delete_user,
                 style=Pack(
-                    margin_top=10,
-                    margin_bottom=10,
+                    margin=10,
+                    text_align="center",
                     background_color="red"
                 )
             )
@@ -470,12 +424,14 @@ class BastionPass(toga.App):
 
         if self.logged_in_user is None:
             return_to_home_button = toga.Button(
+                style=self.button_style,
                 text="Return to home screen",
                 on_press=partial(self.return_to_home_screen, logged_in=False)
             )
 
         else:
             return_to_home_button = toga.Button(
+                style=self.button_style,
                 text="Return to home screen",
                 on_press=self.return_to_home_screen
             )
@@ -1619,7 +1575,7 @@ class BastionPass(toga.App):
 
         else:
             pattern_label = toga.Label(
-                text="Please enter the pattern of your password file below: \nE.g.: \nservice\nusername\npassword",
+                text="Please enter the pattern of your password file below: \nTo define the service, type 'service'. To define the username, type in 'username'. To define the password, type 'password'. If you want to ignore a line, type 'ignore'. \nNOTE: Must have a individual service/username/password section for each service",
                 style=self.label_style
             )
 
