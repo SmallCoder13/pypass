@@ -1,7 +1,6 @@
 """
 A cross-platform password manager written in python
 """
-import json
 
 # Data Structure
 
@@ -40,6 +39,7 @@ from .utils import *
 import cryptography.fernet
 from functools import partial
 from cryptography import fernet
+from queue import Queue, Empty, Full
 from cryptography.fernet import Fernet
 
 # Data migration imports
@@ -56,7 +56,7 @@ else:
     import pyperclip
 
 # Transfer migration ability from migration server to background server
-# Command successfully sent to server, have to add handling for send command
+# Command successfully sent to server and send functionality working. Work on adding Connection Refused handling
 
 class BastionPass(toga.App):
     async def on_running(self):
@@ -464,7 +464,7 @@ class BastionPass(toga.App):
         if not is_valid:
             return None
 
-        if not os.path.exists(username_path):
+        if not Path(username_path).exists():
             dialog = toga.ErrorDialog(
                 title=self.error_title,
                 message=f"User {username} doesn't exist"
@@ -592,8 +592,8 @@ class BastionPass(toga.App):
         if password_correct == "Correct password entered":
             from .background_server import BackgroundServer
 
-            self.server_queue = asyncio.Queue()
-            self.app_queue = asyncio.Queue()
+            self.server_queue = Queue()
+            self.app_queue = Queue()
             # app_side, server_side = multiprocessing.Pipe(duplex=True)
 
             # self.server_loop = self.loop.create_task(
@@ -1604,10 +1604,11 @@ class BastionPass(toga.App):
 
     async def send_data(self, _, ready_to_send: bool = False):
         if ready_to_send is False:
-            self.addresses_selection = toga.Selection(
-                items=[psutil.net_if_addrs()[interface][0].address for interface in psutil.net_if_addrs() if psutil.net_if_addrs()[interface][0].address != "127.0.0.1"],
-                style=self.selection_style
+            address_label = toga.Label(
+                text="Enter the IP address of the receiving device below: ",
+                style=self.label_style
             )
+            self.address_input = toga.TextInput(style=self.input_style)
 
             submit_address_button = toga.Button(
                 style=self.button_style,
@@ -1617,7 +1618,8 @@ class BastionPass(toga.App):
 
             add_to_screen(
                 widgets_to_add=(
-                    self.addresses_selection,
+                    address_label,
+                    self.address_input,
                     submit_address_button
                 ),
                 box_to_add_to=self.a_box,
@@ -1625,15 +1627,34 @@ class BastionPass(toga.App):
             )
 
         else:
-            await asyncio.to_thread(
-                self.server_queue.put,
-                f"COMMAND SEND ADDRESS {self.addresses_selection.value} PORT {os.environ['PORT']} PATH {self.data_file_path} DONE"
-            )
+            try:
+                # self.server_queue.put(f"COMMAND SEND ADDRESS {self.addresses_selection.value} PORT {os.environ['PORT']} PATH {self.data_file_path} DONE")
 
-            # self.app_pipe.send(f"COMMAND SEND ADDRESS {self.addresses_selection.value} PORT {os.environ['PORT']} PATH {self.data_file_path}"),
-            # self.app_pipe.send("DONE")
+                print(f"Server port is of type: {type(os.environ["PORT"])}")
+                print(f"Data path is of type: {type(self.data_file_path.as_posix())}")
 
-            print(f"COMMAND SEND ADDRESS {self.addresses_selection.value} PORT {os.environ['PORT']} DONE")
+                self.server_queue.put(
+                    json.dumps(
+                        {
+                            "command": "send",
+                            "address": self.address_input.value,
+                            "port": os.environ["PORT"],
+                            "path": self.data_file_path.as_posix()
+                        }
+                    ) + " DONE"
+                )
+
+            except Full:
+                dialog = toga.ErrorDialog(
+                    title=self.error_title,
+                    message="Unable to send command to server. Server queue is full"
+                )
+
+                await self.dialog(dialog)
+                return self.return_to_home_screen()
+
+            else:
+                print(f"COMMAND SEND ADDRESS {self.address_input.value} PORT {os.environ['PORT']} PATH {self.data_file_path} DONE")
 
     # --------------------- Background functions --------------------- #
     async def server_message_listener(self):
@@ -1642,25 +1663,67 @@ class BastionPass(toga.App):
 
         while True:
             if self.logged_in_user:
-                print(f"App queue empty: {self.app_queue.empty()}")
-                message_from_server += await self.app_queue.get()
 
-                print(f"Message from server: {message_from_server}")
+                try:
+                    message_from_server += self.app_queue.get_nowait()
 
-                if isinstance(message_from_server, bytes):
-                    message_from_server = message_from_server.decode()
+                    if isinstance(message_from_server, bytes):
+                        message_from_server = message_from_server.decode()
 
-                elif not isinstance(message_from_server, str):
-                    message_from_server = str(message_from_server)
+                    elif not isinstance(message_from_server, str):
+                        dialog = toga.ErrorDialog(
+                            title=self.error_title,
+                            message="Unable to start server message listener. Received unexpected data type"
+                        )
 
-                if message_from_server[-4:] == "DONE":
-                    message_complete = True
+                        await self.dialog(dialog)
+                        self.main_window.close()
+                        break
 
-                elif message_from_server[-4:] != "DONE" and message_complete is True:
-                    message_complete = False
+                except Empty:
+                    await asyncio.sleep(0.01)
+                    continue
 
                 else:
-                    continue
+                    print(f"Message from server: {message_from_server}")
+
+                    if isinstance(message_from_server, bytes):
+                        message_from_server = message_from_server.decode()
+
+                    elif not isinstance(message_from_server, str):
+                        message_from_server = str(message_from_server)
+
+                    if message_from_server.endswith("DONE"):
+                        message_from_server: dict = json_repair.loads(message_from_server)
+
+                        if message_from_server["message_type"] == "error":
+                            print("Received error message from server")
+
+                            dialog = toga.ErrorDialog(
+                                title=self.error_title,
+                                message=message_from_server["message"]
+                            )
+
+                            await self.dialog(dialog)
+                            return self.return_to_home_screen()
+
+                        elif message_from_server["message_type"] == "error_with_traceback":
+                            dialog = toga.StackTraceDialog(
+                                title=self.error_title,
+                                message=message_from_server["message"],
+                                content=message_from_server["traceback"]
+                            )
+
+                            await self.dialog(dialog)
+
+                        message_complete = True
+                        message_from_server: str = ""
+
+                    elif not message_from_server.endswith("DONE") and message_complete is True:
+                        message_complete = False
+
+                    else:
+                        continue
 
             else:
                 await asyncio.sleep(0.01)
@@ -1673,14 +1736,11 @@ class BastionPass(toga.App):
         window_can_close: bool
 
         if self.logged_in_user:
-            asyncio.run_coroutine_threadsafe(
-                self.server_queue.put("SHUTDOWN"),
-                self.loop
-            )
+            self.server_queue.put("SHUTDOWN")
             self.app_queue.shutdown()
 
             try:
-                if self.server_queue.empty:
+                if self.server_queue.empty():
                     window_can_close = True
 
                 else:

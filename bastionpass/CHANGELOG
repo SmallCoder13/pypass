@@ -40,3 +40,11 @@
 * Fix layout so content is now centered
 * Remove duplicate definition of home widgets
 * Work on trying to get background server to start
+
+## 1.0.0 (30 July 2026)
+* Add send data functionality
+* Start working on connection refused error handling
+
+## 1.0.0 (31 July 2026)
+* Switch messages from server to app from strings to dictionaries
+* Add error handling for connection errors

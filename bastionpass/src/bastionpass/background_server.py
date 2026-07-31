@@ -1,62 +1,106 @@
-import asyncio
+import json
+
 import uvicorn
+import asyncio
 import threading
+import traceback
 from .utils import *
 from pathlib import Path
 from fastapi import FastAPI
+from httpx import post, ConnectError
 from toga.app import App as BastionPass
-from toga.platform import current_platform
 from contextlib import asynccontextmanager
+from toga.platform import current_platform
+from queue import Queue, ShutDown
 
-def create_app(app_object):
+class BackgroundServer:
     @asynccontextmanager
-    async def app_lifespan(app):
+    async def app_lifespan(self, app):
+        self.app_queue.put_nowait(
+            json.dumps(
+                {
+                    "message_type": "message",
+                    "message": "FastAPI app started"
+                }
+            ) + "DONE"
+        )
+        # self.app_queue.put_nowait("FastAPI app started DONE")
         # asyncio.create_task(
         #     asyncio.to_thread(
-        #         app_object.app_queue.put,
-        #         "'Lifespan thingy called'"
+        #         app_object.app_queue.put_nowait,
+        #         "Lifespan thingy called DONE"
         #     )
         # )
-        asyncio.create_task(app_object.message_listener())
-        asyncio.create_task(app_object.command_listener())
+
+        asyncio.create_task(self.message_listener())
+        # asyncio.create_task(self.command_listener())
 
         yield
 
-        app_object.shutdown_in_progress = True
-    return FastAPI(lifespan=app_lifespan)
+        self.shutdown_in_progress = True
 
-class BackgroundServer:
-    def __init__(self, port: int, data_path: Path, username: str, server_queue: asyncio.Queue, app_queue: asyncio.Queue):
+    def __init__(self, port: int, data_path: Path, username: str, server_queue: Queue, app_queue: Queue):
         try:
 
             self.server_queue: asyncio.Queue = server_queue
             self.app_queue: asyncio.Queue = app_queue
             self.shutdown_in_progress: bool = False
-            self.is_command_complete: bool = False
             self.data_path: Path = data_path
-            self.fast_api = create_app(self)
+            self.fast_api = FastAPI(lifespan=self.app_lifespan)
             self.username: str = username
-            self.command = {}
             self.port = port
 
-            self.app_queue.put_nowait("Adding endpoints")
+            # self.app_queue.put_nowait("Adding endpoints DONE")
+            self.app_queue.put_nowait(
+                json.dumps(
+                    {
+                        "message_type": "message",
+                        "message": "Adding endpoints"
+                    }
+                ) + "DONE"
+            )
             self.add_endpoints()
 
-            self.app_queue.put_nowait("Starting server")
+            # self.app_queue.put_nowait("Starting server DONE")
+            self.app_queue.put_nowait(
+                json.dumps(
+                    {
+                        "message_type": "message",
+                        "message": "Starting server"
+                    }
+                ) + "DONE"
+            )
             server_started = self.start_server()
 
             if not server_started:
-                raise Exception("Server didn't successfully start")
+                raise Exception("Server didn't successfully start DONE")
 
         except Exception as e:
-            self.app_queue.put_nowait(f"Error {e}")
+            self.app_queue.put_nowait(
+                json.dumps(
+                    {
+                        "message_type": "error_with_traceback",
+                        "message": "An error occurred while initializing background server.",
+                        "traceback": traceback.format_exc()
+                    }
+                )
+            )
+            # self.app_queue.put_nowait(f"Error {e}")
 
     def add_endpoints(self):
         try:
-            self.app_queue.put_nowait("Adding first and second route")
+            # self.app_queue.put_nowait("Adding first and second route DONE")
+            self.app_queue.put_nowait(
+                json.dumps(
+                    {
+                        "message_type": "message",
+                        "message": "Adding first and second route"
+                    }
+                ) + "DONE"
+            )
 
             self.fast_api.add_api_route(
-                path="/receive_data/{sending_address}/{data}",
+                path="/receive_data/{data}",
                 endpoint=self.receive_data,
                 methods=["POST"]
             )
@@ -67,10 +111,27 @@ class BackgroundServer:
                 methods=["POST"]
             )
 
-        except Exception as e:
-            self.app_queue.put_nowait(f"Error: {e}")
+            # self.app_queue.put_nowait("Finished adding first and second route DONE")
+            self.app_queue.put_nowait(
+                json.dumps(
+                    {
+                        "message_type": "message",
+                        "message": "Finished adding first and second route"
+                    }
+                ) + "DONE"
+            )
 
-        return None
+        except Exception as e:
+            self.app_queue.put_nowait(
+                json.dumps(
+                    {
+                        "message_type": "error_with_traceback",
+                        "message": "An error occurred while adding server endpoints.",
+                        "traceback": traceback.format_exc()
+                    }
+                ) + "DONE"
+            )
+            # self.app_queue.put_nowait(f"Error: {e}")
 
     def start_server(self):
         """
@@ -90,106 +151,97 @@ class BackgroundServer:
             return True
 
         except Exception as e:
-            self.app_queue.put_nowait(f"Error {e}")
+            self.app_queue.put_nowait(
+                json.dumps(
+                    {
+                        "message_type": "error_with_traceback",
+                        "message": "An error occurred while starting the server.",
+                        "traceback": traceback.format_exc()
+                    }
+                )
+            )
+            # self.app_queue.put_nowait(f"Error {e}")
             return False
 
-    def receive_data(self, sending_address, data):
+    def receive_data(self, data):
         pass
 
     def send_data(self, offset_data: dict, receiving_address: str, receiving_port: int):
-        # data = self.gather_data()
-
-        print(offset_data)
-
-    def gather_data(self):
         try:
-            data: dict = load_user_data(self.data_path)
+            post(f"http://{receiving_address}:{receiving_port}/receive_data/{offset_data}")
 
-            if "data" not in data.keys() or len(data["data"].keys()) == 0:
-                return "No passwords found"
+        except ConnectError:
+            self.app_queue.put_nowait(
+                json.dumps(
+                    {
+                        "message_type": "error",
+                        "message": "ERROR: Unable to connect to receiving device. Please make sure receiving device is ready to receive data and connected to the same network."
+                    }
+                ) + "DONE"
+            )
+            # self.app_queue.put_nowait("ERROR: Unable to connect to receiving device. Please make sure receiving device is ready to receive data and connected to the same network.")
 
-            else:
-                data: dict = data["data"]
+    def search_for_command(self, message_to_search: dict):
 
-            decrypted_data = {}
-
-            for service in list(data.keys()):
-                for service_username in data[service].keys():
-                    username_password = data[service][service_username]["password"]
-
-                    if current_platform.lower() == "android":
-                        username_iv = data[service][service_username]["iv"]
-                        decrypted_key  = decrypt_data(data_to_decrypt=data[service][service_username]["key"], iv=username_iv)
-                        decrypted_password = Fernet(decrypted_key).decrypt(username_password.encode())
-
-                    else:
-                        username_key = data[service][service_username]["key"]
-                        decrypted_key = decrypt_data(data_to_decrypt=username_key)
-                        print(f"Decrypted key is: {decrypted_key}")
-                        decrypted_password = decrypt_data(data_to_decrypt=username_password.encode(), key_to_use=decrypted_key)
-
-                    if service in decrypted_data.keys():
-                        decrypted_data[service][service_username] = {
-                            "password": decrypted_password,
-                            "key": decrypted_key
-                        }
-
-                    else:
-                        decrypted_data[service] = {
-                            service_username: {
-                                "password": decrypted_password,
-                                "key": decrypted_key
-                            }
-                        }
-
-        except Exception as e:
-            self.app_queue.put_nowait(f"Error {e}")
-
-    async def command_listener(self):
-        while not self.shutdown_in_progress:
-            if self.is_command_complete is True:
-                if self.command["COMMAND"] == "SEND":
-                    offset_data = offset_user_data(
-                        user_data=load_user_data(
-                            password_file_path=self.command["PATH"]
-                        )
+        if message_to_search["command"] == "send":
+            self.send_data(
+                offset_data=offset_user_data(
+                    load_user_data(
+                        password_file_path=Path(message_to_search["path"])
                     )
-
-                    self.send_data(
-                        offset_data=offset_data,
-                        receiving_port=self.command["PORT"],
-                        receiving_address=self.command["ADDRESS"]
-                    )
-
-            else:
-                await asyncio.sleep(0.01)
-                continue
+                ),
+                receiving_address=message_to_search["address"],
+                receiving_port=message_to_search["port"]
+            )
+        # self.app_queue.put_nowait("Started command listener DONE")
+        # while not self.shutdown_in_progress:
+        #     if self.is_command_complete is True:
+        #         if self.command["COMMAND"] == "SEND":
+        #             offset_data = offset_user_data(
+        #                 user_data=load_user_data(
+        #                     password_file_path=self.command["PATH"]
+        #                 )
+        #             )
+        # 
+        #             self.send_data(
+        #                 offset_data=offset_data,
+        #                 receiving_port=self.command["PORT"],
+        #                 receiving_address=self.command["ADDRESS"]
+        #             )
+        # 
+        #     else:
+        #         await asyncio.sleep(0.01)
+        #         continue
 
     async def message_listener(self):
         try:
-            await self.app_queue.put("Started message listener")
+            self.app_queue.put_nowait(
+                json.dumps(
+                    {"message_type": "message",
+                     "message": "Started message listener"
+                     }
+                ) + "DONE"
+            )
+            # self.app_queue.put_nowait("Started message listener DONE")
             message = ""
 
             while not self.shutdown_in_progress:
-                message += await self.server_queue.get()
+                message += self.server_queue.get()
                 # message = self.comms_pipe.get()
-
-                await self.app_queue.put("Received new message")
 
                 if isinstance(message, bytes):
                     message = message.decode()
                 else:
                     message = str(message)
 
-                await self.app_queue.put(message.replace(' ', '_'))
-
-                if message[-4:] == "DONE":
-                    self.is_command_complete = True
-                    message = ""
-
-                elif message[-4:] != "DONE" and self.is_command_complete is True:
-                    self.is_command_complete = False
-                    self.command.update(json_repair.loads(message))
+                if message.endswith("DONE"):
+                    message_as_dictionary = json_repair.loads(message.replace("DONE", ""))
+                    self.search_for_command(message_to_search=message_as_dictionary)
+                    # self.is_command_complete = True
+                #     message = ""
+                # 
+                # elif not message.endswith("DONE") and self.is_command_complete is True:
+                #     self.is_command_complete = False
                     # self.command += message
 
                 elif message == "SHUTDOWN":
@@ -198,9 +250,17 @@ class BackgroundServer:
                     # self.command_executor_thread.join()
                     # self.server_loop.stop()
 
-                else:
-                    self.command.update(json_repair.loads(message))
-                    # self.command += message
+        except ShutDown:
+            self.shutdown_in_progress = True
 
         except Exception as e:
-            await self.app_queue.put(f"Error {e}")
+            self.app_queue.put_nowait(
+                json.dumps(
+                    {
+                        "message_type": "error_with_traceback",
+                        "message": "An error occurred while listening for messages.",
+                        "traceback": traceback.format_exc()
+                    }
+                ) + "DONE"
+            )
+            # self.app_queue.put_nowait(f"An error occurred while listening for messages. Error {traceback.format_exc()}")
