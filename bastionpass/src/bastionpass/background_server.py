@@ -184,7 +184,7 @@ class BackgroundServer:
             self.app_queue.put_nowait(
                 json.dumps(
                     {
-                        "message_type": "gui_message",
+                        "message_type": "message",
                         "message": f"Offset string is: {offset_string}"
                     }
                 ) + "DONE"

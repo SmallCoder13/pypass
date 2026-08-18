@@ -490,6 +490,26 @@ def offset_user_data(user_data: dict):
 
         return offset_user_data, data_offset
 
+def offset_string(string_to_offset: str):
+    data_offset = random.randint(1, len(offset_data))
+    string_offset = ""
+
+    for character in string_to_offset:
+        try:
+            if character.islower():
+                string_offset += str(offset_data.index(character) + data_offset)
+
+            elif character.isupper():
+                string_offset += str(offset_data.index(character) + data_offset) + "U"
+
+        except ValueError:
+            string_offset += str(character + "!")
+
+        finally:
+            string_offset += " "
+
+    return (string_offset, data_offset)
+
 def deoffset_string(string_to_deoffset: str, data_offset: int):
     deoffset_data = ""
 
@@ -498,7 +518,7 @@ def deoffset_string(string_to_deoffset: str, data_offset: int):
             deoffset_data += str(character_data[:-1]).replace("[", "").replace("]", "").replace("'", "").replace(",", "")
 
         elif character_data[-1] == "U":
-            deoffset_data += offset_data[int(str(character_data[:-1]).replace("[", "").replace("]", "").replace("'", "").replace(",", "")) - data_offset]
+            deoffset_data += offset_data[int(str(character_data[:-1]).replace("[", "").replace("]", "").replace("'", "").replace(",", "")) - data_offset].upper()
 
         else:
             deoffset_data += offset_data[int(character_data) - data_offset]

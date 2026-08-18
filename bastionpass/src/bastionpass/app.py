@@ -2,6 +2,7 @@
 A cross-platform password manager written in python
 """
 import json
+import random
 
 # Data Structure
 
@@ -137,6 +138,11 @@ class BastionPass(toga.App):
             order=1
         )
 
+        offset_group = toga.Group(
+            text="Offset functions",
+            order=2
+        )
+
         send_passwords_command = toga.Command(
             action=self.send_data,
             group=password_group,
@@ -155,6 +161,20 @@ class BastionPass(toga.App):
             group=password_group,
             text="Get Server Details",
             order=2
+        )
+
+        trigger_offset_command = toga.Command(
+            action=self.trigger_offset_data,
+            group=offset_group,
+            text="Trigger offset data",
+            order=0
+        )
+
+        trigger_deoffset_command = toga.Command(
+            action=self.trigger_deoffset_data,
+            group=offset_group,
+            text="Trigger deoffset data",
+            order=1
         )
 
         self.selection_style = Pack(
@@ -194,6 +214,8 @@ class BastionPass(toga.App):
         self.commands.add(send_passwords_command)
         self.commands.add(get_app_details_command)
         self.commands.add(get_server_details_command)
+        self.commands.add(trigger_offset_command)
+        self.commands.add(trigger_deoffset_command)
 
         self.paths.data.mkdir(parents=True, exist_ok=True)
         self.paths.logs.mkdir(parents=True, exist_ok=True)
@@ -1416,6 +1438,112 @@ class BastionPass(toga.App):
             widgets_to_add=(
                 addresses_label,
                 port_label
+            ),
+            box_to_add_to=self.a_box,
+            clear_screen=True
+        )
+
+    def trigger_offset_data(self, _, ready_to_offset=False):
+        print(f"Ready to offset is: {ready_to_offset}")
+
+        if ready_to_offset is True:
+            offset_label = toga.Label(
+                text=f"Offset data: {offset_string(self.text_input.value)}",
+                style=self.label_style
+            )
+
+            home_button = toga.Button(
+                text="Return to Home",
+                on_press=self.return_to_home_screen,
+                style=self.button_style
+            )
+
+            add_to_screen(
+                widgets_to_add=(
+                    offset_label,
+                    home_button
+                ),
+                box_to_add_to=self.a_box,
+                clear_screen=True
+            )
+
+            return None
+
+        text_label = toga.Label(
+            text="Please enter text to offset below: ",
+            style=self.label_style
+        )
+
+        self.text_input = toga.TextInput(style=self.input_style)
+
+        submit_button = toga.Button(
+            text="Submit Data",
+            on_press=partial(self.trigger_offset_data, ready_to_offset=True)
+        )
+
+        add_to_screen(
+            widgets_to_add=(
+                text_label,
+                self.text_input,
+                submit_button
+            ),
+            box_to_add_to=self.a_box,
+            clear_screen=True
+        )
+
+    def trigger_deoffset_data(self, _, ready_to_offset=False):
+        print(f"Ready to offset is: {ready_to_offset}")
+
+        if ready_to_offset is True:
+            string_that_is_offset, string_offset = self.text_input.value.split(" ")
+
+            if not isinstance(string_that_is_offset, str):
+                string_that_is_offset = str(string_that_is_offset)
+
+            if not isinstance(string_offset, int):
+                string_offset = int(string_offset)
+
+            string_that_is_offset = string_that_is_offset.replace("_", " ").replace("'", "")
+
+            offset_label = toga.Label(
+                text=f"Deoffset data: {deoffset_string(string_that_is_offset, string_offset)}",
+                style=self.label_style
+            )
+
+            home_button = toga.Button(
+                text="Return to Home",
+                on_press=self.return_to_home_screen,
+                style=self.button_style
+            )
+
+            add_to_screen(
+                widgets_to_add=(
+                    offset_label,
+                    home_button
+                ),
+                box_to_add_to=self.a_box,
+                clear_screen=True
+            )
+
+            return None
+
+        text_label = toga.Label(
+            text="Please enter the offset text below: ",
+            style=self.label_style
+        )
+
+        self.text_input = toga.TextInput(style=self.input_style)
+
+        submit_button = toga.Button(
+            text="Submit Data",
+            on_press=partial(self.trigger_deoffset_data, ready_to_offset=True)
+        )
+
+        add_to_screen(
+            widgets_to_add=(
+                text_label,
+                self.text_input,
+                submit_button
             ),
             box_to_add_to=self.a_box,
             clear_screen=True
