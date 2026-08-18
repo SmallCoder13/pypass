@@ -48,3 +48,8 @@
 ## 1.0.0 (31 July 2026)
 * Switch messages from server to app from strings to dictionaries
 * Add error handling for connection errors
+
+## 1.0.0 (08 August 2026)
+* Work on receiving device deoffset data functionality
+* Add new function to utilities to help with deoffseting offset strings
+* Fix usernames, passwords, keys, and ivs not being reset between username offset

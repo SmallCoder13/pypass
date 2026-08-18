@@ -1,6 +1,7 @@
 """
 A cross-platform password manager written in python
 """
+import json
 
 # Data Structure
 
@@ -28,6 +29,7 @@ A cross-platform password manager written in python
 
 # Window related imports
 import toga
+from click import style
 from toga.style import Pack
 
 # App related imports
@@ -148,6 +150,12 @@ class BastionPass(toga.App):
             text="Get App Data Folder",
             order=1
         )
+        get_server_details_command = toga.Command(
+            action=self.get_server_details,
+            group=password_group,
+            text="Get Server Details",
+            order=2
+        )
 
         self.selection_style = Pack(
             margin=10,
@@ -185,6 +193,7 @@ class BastionPass(toga.App):
         self.commands.clear()
         self.commands.add(send_passwords_command)
         self.commands.add(get_app_details_command)
+        self.commands.add(get_server_details_command)
 
         self.paths.data.mkdir(parents=True, exist_ok=True)
         self.paths.logs.mkdir(parents=True, exist_ok=True)
@@ -602,6 +611,7 @@ class BastionPass(toga.App):
 
             self.logged_in_user = username
             self.data_file_path = Path(self.paths.data, self.logged_in_user, ".passwords.json")
+            self.cache_file_path = Path(self.paths.cache, self.logged_in_user)
 
             print("Setting up/Starting background server")
 
@@ -639,6 +649,7 @@ class BastionPass(toga.App):
         password = self.password_entry.value
 
         self.data_file_path = Path(self.paths.data, user, ".passwords.json")
+        self.cache_file_path = Path(self.paths.cache, user)
 
         is_valid = await self.validate_values(
             {
@@ -1387,6 +1398,29 @@ class BastionPass(toga.App):
 
         return True
 
+    def get_server_details(self, _):
+        server_port = os.environ["PORT"]
+        available_addresses = [psutil.net_if_addrs()[interface][0].address for interface in psutil.net_if_addrs()]
+
+        addresses_label = toga.Label(
+            text=f"Available addresses: \n {[address + '\n' for address in available_addresses]}",
+            style=self.label_style
+        )
+
+        port_label = toga.Label(
+            text=f"Server port: \n{server_port}",
+            style=self.label_style
+        )
+
+        add_to_screen(
+            widgets_to_add=(
+                addresses_label,
+                port_label
+            ),
+            box_to_add_to=self.a_box,
+            clear_screen=True
+        )
+
     # --------------------- Migration related functions --------------------- #
 
     async def import_from_file(self, _=None, show_path_dialog: bool=False, save_passwords: bool=False):
@@ -1610,6 +1644,16 @@ class BastionPass(toga.App):
             )
             self.address_input = toga.TextInput(style=self.input_style)
 
+            port_label = toga.Label(
+                text="Enter the port of the receiving device below: ",
+                style=self.input_style,
+            )
+
+            self.port_input = toga.TextInput(
+                value="9000",
+                style=self.input_style
+            )
+
             submit_address_button = toga.Button(
                 style=self.button_style,
                 text="Submit address",
@@ -1620,6 +1664,8 @@ class BastionPass(toga.App):
                 widgets_to_add=(
                     address_label,
                     self.address_input,
+                    port_label,
+                    self.port_input,
                     submit_address_button
                 ),
                 box_to_add_to=self.a_box,
@@ -1630,7 +1676,7 @@ class BastionPass(toga.App):
             try:
                 # self.server_queue.put(f"COMMAND SEND ADDRESS {self.addresses_selection.value} PORT {os.environ['PORT']} PATH {self.data_file_path} DONE")
 
-                print(f"Server port is of type: {type(os.environ["PORT"])}")
+                print(f"Server port is of type: {type(self.port_input.value)}")
                 print(f"Data path is of type: {type(self.data_file_path.as_posix())}")
 
                 self.server_queue.put(
@@ -1638,7 +1684,7 @@ class BastionPass(toga.App):
                         {
                             "command": "send",
                             "address": self.address_input.value,
-                            "port": os.environ["PORT"],
+                            "port": self.port_input.value,
                             "path": self.data_file_path.as_posix()
                         }
                     ) + " DONE"
@@ -1655,6 +1701,65 @@ class BastionPass(toga.App):
 
             else:
                 print(f"COMMAND SEND ADDRESS {self.address_input.value} PORT {os.environ['PORT']} PATH {self.data_file_path} DONE")
+
+    def send_required_input(self, _=None, input_message: str="", function_requiring_input: str="", param_name: str=""):
+        if input_message == "":
+            print(f"param_name is: {param_name}")
+
+            self.server_queue.put_nowait(
+                json.dumps(
+                    {
+                        "command": "required_input",
+                        "message": self.required_input.value,
+                        "function": function_requiring_input,
+                        "param": param_name
+                    }
+                ) + "DONE"
+            )
+
+        required_label = toga.Label(
+            text=input_message,
+            style=self.label_style
+        )
+
+        self.required_input = toga.TextInput(style=self.input_style)
+
+        submit_data_button = toga.Button(
+            text="Submit Data",
+            on_press=partial(self.send_required_input, input_message="", function_requiring_input=function_requiring_input, param_name=param_name),
+            style=self.button_style
+        )
+
+        add_to_screen(
+            widgets_to_add=(
+                required_label,
+                self.required_input,
+                submit_data_button
+            ),
+            box_to_add_to=self.a_box,
+            clear_screen=True
+        )
+
+    def display_gui_message(self, gui_message: str):
+        message_label = toga.Label(
+            text=gui_message,
+            style=self.label_style
+        )
+
+        done_button = toga.Button(
+            text="Done, return to home",
+            on_press=self.return_to_home_screen,
+            style=self.button_style
+        )
+
+        add_to_screen(
+            widgets_to_add=(
+                message_label,
+                done_button
+            ),
+            box_to_add_to=self.a_box,
+            clear_screen=True
+        )
 
     # --------------------- Background functions --------------------- #
     async def server_message_listener(self):
@@ -1680,18 +1785,14 @@ class BastionPass(toga.App):
                         self.main_window.close()
                         break
 
+                    print(json_repair.loads(message_from_server))
+
                 except Empty:
                     await asyncio.sleep(0.01)
                     continue
 
                 else:
                     print(f"Message from server: {message_from_server}")
-
-                    if isinstance(message_from_server, bytes):
-                        message_from_server = message_from_server.decode()
-
-                    elif not isinstance(message_from_server, str):
-                        message_from_server = str(message_from_server)
 
                     if message_from_server.endswith("DONE"):
                         message_from_server: dict = json_repair.loads(message_from_server)
@@ -1715,6 +1816,20 @@ class BastionPass(toga.App):
                             )
 
                             await self.dialog(dialog)
+                            return self.return_to_home_screen()
+
+
+                        elif message_from_server["message_type"] == "input_required":
+                            self.send_required_input(
+                                input_message=message_from_server["message"],
+                                function_requiring_input=message_from_server["function"],
+                                param_name=message_from_server["param"]
+                            )
+
+                        elif message_from_server["message_type"] == "gui_message":
+                            self.display_gui_message(
+                                gui_message=message_from_server["message"]
+                            )
 
                         message_complete = True
                         message_from_server: str = ""

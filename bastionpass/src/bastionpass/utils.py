@@ -11,6 +11,48 @@ if toga.platform.current_platform.lower() == "android" or "window" in toga.platf
 
 else:
     import pyperclip
+    
+offset_data = [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "g",
+        "h",
+        "i",
+        "j",
+        "k",
+        "l",
+        "m",
+        "n",
+        "o",
+        "p",
+        "q",
+        "r",
+        "s",
+        "t",
+        "u",
+        "v",
+        "w",
+        "x",
+        "y",
+        "z",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "0",
+        "_",
+        "-"
+        "!"
+    ]
 
 def recover_key(backup_phrase: list) -> str:
     recovered_key = ""
@@ -287,47 +329,6 @@ def encrypt_data(data_to_encrypt: str or bytes, key_to_use: str ="main_key") -> 
         }
 
 def offset_user_data(user_data: dict):
-    offset_data = [
-        "a",
-        "b",
-        "c",
-        "d",
-        "e",
-        "f",
-        "g",
-        "h",
-        "i",
-        "j",
-        "k",
-        "l",
-        "m",
-        "n",
-        "o",
-        "p",
-        "q",
-        "r",
-        "s",
-        "t",
-        "u",
-        "v",
-        "w",
-        "x",
-        "y",
-        "z",
-        "1",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6",
-        "7",
-        "8",
-        "9",
-        "0",
-        "_",
-        "-"
-        "!"
-    ]
     offset_user_data = {}
 
     decrypted_data = {}
@@ -339,12 +340,13 @@ def offset_user_data(user_data: dict):
                 encryption_iv = user_data["data"][service][username]["iv"]
 
             else:
-                encryption_iv = ""
+                encryption_iv = None
 
             decrypted_key = decrypt_data(user_data["data"][service][username]["key"], iv=encryption_iv)
-            decrypted_password = Fernet(decrypted_key).decrypt(
-                user_data["data"][service][username]["password"]
-            ).decode()
+            decrypted_password = Fernet(decrypted_key).decrypt(user_data["data"][service][username]["password"]).decode()
+            # decrypted_password = Fernet(decrypted_key).decrypt(
+            #     user_data["data"][service][username]["password"]
+            # ).decode()
 
             if toga.platform.current_platform.lower() == "android":
                 if service in decrypted_data.keys():
@@ -383,10 +385,11 @@ def offset_user_data(user_data: dict):
         offset_username = ""
         offset_password = ""
         offset_key = ""
+        offset_iv = ""
 
         for character in str(service):
             try:
-                offset_service += str(offset_data.index(character.lower()))
+                offset_service += str(offset_data.index(character.lower())) + data_offset
 
                 if character.isupper():
                     offset_service += "U"
@@ -397,12 +400,12 @@ def offset_user_data(user_data: dict):
             else:
                 offset_service += " "
 
-        print("Offset service")
+            print("Offset service")
 
         for username in decrypted_data[service]:
             for character in str(username):
                 try:
-                    offset_username += str(offset_data.index(character.lower()))
+                    offset_username += str(offset_data.index(character.lower())) + data_offset
 
                     if character.isupper():
                         offset_username += "U"
@@ -421,24 +424,24 @@ def offset_user_data(user_data: dict):
                 print(f"Character is: {character}")
 
                 try:
-                    offset_password += str(offset_data.index(character.lower()))
+                    offset_password += str(offset_data.index(character.lower())) + data_offset
 
                     if character.isupper():
-                        offset_password += "U"
+                         offset_password += "U"
 
                 except ValueError:
-                    offset_password += character + "!"
+                     offset_password += character + "!"
 
                 else:
-                    offset_password += " "
-                    print(offset_password)
+                     offset_password += " "
+                     print(offset_password)
 
             print("Offset password")
 
             for character in decrypted_data[service][username]["key"]:
                 character = str(character)
                 try:
-                    offset_key += str(offset_data.index(character.lower()))
+                    offset_key += str(offset_data.index(character.lower())) + data_offset
 
                     if character.isupper():
                         offset_key += "U"
@@ -451,12 +454,56 @@ def offset_user_data(user_data: dict):
 
             print("Offset key")
 
+            for character in decrypted_data[service][username]["iv"]:
+                character = str(character)
+                try:
+                    offset_iv += str(offset_data.index(character.lower())) + data_offset
+                    if character.isupper():
+                        offset_iv += "U"
+
+                except ValueError:
+                    offset_iv += str(character) + "!"
+
+                else:
+                    offset_iv += " "
+
             if offset_service in offset_user_data.keys():
                 offset_user_data[offset_service][offset_username] = {
                     "password": offset_password,
                     "key": offset_key,
-                    "iv": encryption_iv
+                    "iv": offset_iv
                 }
+
+            else:
+                offset_user_data[offset_service] = {
+                    offset_username: {
+                        "password": offset_password,
+                        "key": offset_key,
+                        "iv": offset_iv
+                    }
+                }
+
+            offset_username = ""
+            offset_password = ""
+            offset_key = ""
+            offset_iv = ""
+
+        return offset_user_data, data_offset
+
+def deoffset_string(string_to_deoffset: str, data_offset: int):
+    deoffset_data = ""
+
+    for character_data in string_to_deoffset.split(" "):
+        if character_data[-1] == "!":
+            deoffset_data += str(character_data[:-1]).replace("[", "").replace("]", "").replace("'", "").replace(",", "")
+
+        elif character_data[-1] == "U":
+            deoffset_data += offset_data[int(str(character_data[:-1]).replace("[", "").replace("]", "").replace("'", "").replace(",", "")) - data_offset]
+
+        else:
+            deoffset_data += offset_data[int(character_data) - data_offset]
+
+    return deoffset_data
 
 def import_from_file(path: Path, file_pattern: list):
     """
