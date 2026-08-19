@@ -39,6 +39,32 @@ offset_data = [
         "x",
         "y",
         "z",
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K",
+        "L",
+        "M",
+        "N",
+        "O",
+        "P",
+        "Q",
+        "R",
+        "S",
+        "T",
+        "U",
+        "V",
+        "W",
+        "X",
+        "Y",
+        "Z",
         "1",
         "2",
         "3",
@@ -225,7 +251,7 @@ def get_main_key():
     else:
         import keyring
 
-        if keyring.get_password("PYPASS","MAIN_KEY") is None and env.get("FIRST_RUN") == "true":
+        if (keyring.get_password("PYPASS","MAIN_KEY") is None and env.get("FIRST_RUN") == "true") or (keyring.get_password("PYPASS","MAIN_KEY") is None and env.get("FIRST_RUN") is None):
 
             key = Fernet.generate_key().decode()
             keyring.set_password("PYPASS", "MAIN_KEY", key)
@@ -490,8 +516,10 @@ def offset_user_data(user_data: dict):
 
         return offset_user_data, data_offset
 
-def offset_string(string_to_offset: str):
-    data_offset = random.randint(1, len(offset_data))
+def offset_string(string_to_offset: str, data_offset: int = 0):
+    if data_offset == 0:
+        data_offset = random.randint(1, len(offset_data))
+
     string_offset = ""
 
     for character in string_to_offset:

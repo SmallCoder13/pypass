@@ -1801,6 +1801,16 @@ class BastionPass(toga.App):
             )
 
         else:
+            if "data" not in load_user_data(self.data_file_path).keys():
+                dialog = toga.ErrorDialog(
+                    title=self.error_title,
+                    message="Unable to send data to background server. No passwords are saved"
+                )
+
+                await self.dialog(dialog)
+                return self.return_to_home_screen()
+
+
             try:
                 # self.server_queue.put(f"COMMAND SEND ADDRESS {self.addresses_selection.value} PORT {os.environ['PORT']} PATH {self.data_file_path} DONE")
 

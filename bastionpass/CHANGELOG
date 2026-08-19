@@ -56,3 +56,7 @@
 
 ## 1.0.0 (18 August 2026)
 * Add command to manually trigger offset and deoffset functions
+
+## 1.0.0 (19 August 2026)
+* Work on move offset function to offset string instead of offset user data
+* Fix app crashing on Ubuntu

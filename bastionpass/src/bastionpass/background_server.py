@@ -174,90 +174,61 @@ class BackgroundServer:
                 ) + "DONE"
             )
 
-            with open(Path(toga.App.app.paths.cache,".offset_data.txt"), mode="w") as offset_file:
+            with open(Path(toga.App.app.paths.cache, ".offset_data.txt"), mode="w") as offset_file:
                 json.dump(offset_string, offset_file, indent=4)
 
         elif offset_string == "" and data_offset != 0:
-            with open(Path(toga.App.app.paths.cache, ".offset_data.txt")) as offset_file:
-                offset_string = offset_file.read()
+            offset_user_data = json_repair.from_file(Path(toga.App.app.paths.cache, ".offset_data.txt"))
+
+            if offset_user_data == "":
+                return self.app_queue.put_nowait(
+                    json.dumps(
+                        {
+                            "message_type": "error",
+                            "message": "Unable to deoffset received data. Invalid data saved"
+                        }
+                    ) + "DONE"
+                )
 
             self.app_queue.put_nowait(
                 json.dumps(
                     {
                         "message_type": "message",
-                        "message": f"Offset string is: {offset_string}"
+                        "message": f"offset user data is: {offset_user_data} \nData offset: {data_offset}"
                     }
-                ) + "DONE"
+                )
             )
 
-            offset_dictionary = json_repair.loads(offset_string)
-
-            if offset_dictionary == "":
-                return self.app_queue.put_nowait(
-                    json.dumps(
-                        {
-                            "message_type": "error",
-                            "message": f"Unable to deoffset received data. Received data is: {offset_dictionary}"
-                        }
-                    ) + "DONE"
-                )
-
-            for service in offset_dictionary:
+            for offset_service in offset_user_data.keys():
                 service = deoffset_string(
-                    string_to_deoffset=service,
+                    string_to_deoffset=offset_service,
                     data_offset=data_offset
                 )
 
+                for offset_username in offset_user_data[offset_service].keys():
+                    username = deoffset_string(
+                        string_to_deoffset=offset_username,
+                        data_offset=data_offset
+                    )
+                    password = deoffset_string(
+                        string_to_deoffset=offset_user_data[offset_service][offset_username]["password"],
+                        data_offset=data_offset
+                    )
+                    key = deoffset_string(
+                        string_to_deoffset=offset_user_data[offset_service][offset_username]["key"],
+                        data_offset=data_offset
+                    )
+
+                    if offset_user_data[offset_service][offset_username]["iv"] == "":
+                        offset_iv = ""
+
+                    else:
+                        offset_iv = deoffset_string(
+                            string_to_deoffset=offset_user_data[offset_service][offset_username]["iv"],
+                            data_offset=data_offset
+                        )
+
                 print(service)
-
-            # data = deoffset_string(
-            #     string_to_deoffset=offset_string,
-            #     data_offset=data_offset
-            # )
-
-            # data = json.loads(data)
-
-            offset_list = [
-                "a",
-                "b",
-                "c",
-                "d",
-                "e",
-                "f",
-                "g",
-                "h",
-                "i",
-                "j",
-                "k",
-                "l",
-                "m",
-                "n",
-                "o",
-                "p",
-                "q",
-                "r",
-                "s",
-                "t",
-                "u",
-                "v",
-                "w",
-                "x",
-                "y",
-                "z",
-                "1",
-                "2",
-                "3",
-                "4",
-                "5",
-                "6",
-                "7",
-                "8",
-                "9",
-                "0",
-                "_",
-                "-"
-                "!"
-            ]
 
             # TODO: Can't continue without offset string!!!
             # data = [offset_list[offset_list.index(character)] for character in offset_data.split(" ") if character[-1] != "!"]
@@ -319,16 +290,72 @@ class BackgroundServer:
             # self.app_queue.put_nowait("ERROR: Unable to connect to receiving device. Please make sure receiving device is ready to receive data and connected to the same network.")
 
     def search_for_command(self, message_to_search: dict):
+        offset_user_data = {}
 
         if message_to_search["command"] == "send":
-            offset_string, offset_number = offset_user_data(
-                load_user_data(
-                    password_file_path=Path(message_to_search["path"])
+            user_data = load_user_data(password_file_path=Path(message_to_search["path"]))["data"]
+
+            if user_data == "Password file path doesn't exist":
+                self.app_queue.put_nowait(
+                    json.dumps(
+                        {
+                            "message_type": "error",
+                            "message": "Unable to offset user data. Password file path doesn't exist."
+                        }
+                    ) + "DONE"
                 )
-            )
+
+            elif user_data == "Invalid data saved":
+                self.app_queue.put_nowait(
+                    json.dumps(
+                        {
+                            "message_type": "error",
+                            "message": "Unable to offset user data. Saved data isn't valid."
+                        }
+                    ) + "DONE"
+                )
+
+            for service in user_data.keys():
+                offset_service, offset_number = offset_string(service)
+
+                self.app_queue.put_nowait(
+                    json.dumps(
+                        {
+                            "message_type": "message",
+                            "message": f"Service data is: {user_data[service]}"
+                        }
+                    ) + "DONE"
+                )
+
+                for username in user_data[service].keys():
+                    offset_username = offset_string(username, offset_number)[0]
+                    offset_password = offset_string(user_data[service][username]["password"], offset_number)[0]
+                    offset_key = offset_string(user_data[service][username]["key"], offset_number)[0]
+
+                    if "iv" in user_data[service][username].keys():
+                        offset_iv = offset_string(user_data[service][username]["iv"], offset_number)[0]
+
+                    else:
+                        offset_iv = ""
+                        
+                    if offset_service not in offset_user_data.keys():
+                        offset_user_data[offset_service] = {
+                            offset_username: {
+                                "password": offset_password,
+                                "key": offset_key,
+                                "iv": offset_iv
+                            }
+                        }
+                        
+                    else:
+                        offset_user_data[offset_service][offset_username] = {
+                            "password": offset_password,
+                            "key": offset_key,
+                            "iv": offset_iv
+                        }
 
             self.send_data(
-                offset_data=offset_string,
+                offset_data=offset_user_data,
                 receiving_address=message_to_search["address"],
                 receiving_port=message_to_search["port"]
             )
