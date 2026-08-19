@@ -59,4 +59,6 @@
 
 ## 1.0.0 (19 August 2026)
 * Work on move offset function to offset string instead of offset user data
+* Add missing comma between '-' and '!' characters
+* Get receiving data functionality mostly working
 * Fix app crashing on Ubuntu

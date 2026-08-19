@@ -1879,6 +1879,8 @@ class BastionPass(toga.App):
         )
 
     def display_gui_message(self, gui_message: str):
+        # return exec(f"await self.dialog(toga.{dialog_type.title()}Dialog(title={self.success_title}, message={gui_message}))")
+
         message_label = toga.Label(
             text=gui_message,
             style=self.label_style
@@ -1934,6 +1936,8 @@ class BastionPass(toga.App):
 
                     if message_from_server.endswith("DONE"):
                         message_from_server: dict = json_repair.loads(message_from_server)
+
+                        print(f"Message from server object: {message_from_server}")
 
                         if message_from_server["message_type"] == "error":
                             print("Received error message from server")

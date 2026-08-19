@@ -1,19 +1,20 @@
-import json
+# import json
+# import toga
+# from toga.app import App as BastionPass
+# from toga.platform import current_platform
 
-import json_repair
-import toga
 import queue
 import uvicorn
 import asyncio
 import threading
 import traceback
+import json_repair
 from .utils import *
 from pathlib import Path
 from fastapi import FastAPI
 from queue import Queue, ShutDown
-from toga.app import App as BastionPass
+from cryptography.fernet import Fernet
 from contextlib import asynccontextmanager
-from toga.platform import current_platform
 from httpx import post, ConnectError, ConnectTimeout
 
 class BackgroundServer:
@@ -178,7 +179,8 @@ class BackgroundServer:
                 json.dump(offset_string, offset_file, indent=4)
 
         elif offset_string == "" and data_offset != 0:
-            offset_user_data = json_repair.from_file(Path(toga.App.app.paths.cache, ".offset_data.txt"))
+            offset_user_data = json_repair.loads(json_repair.from_file(Path(toga.App.app.paths.cache, ".offset_data.txt")))
+            deoffset_user_data = {}
 
             if offset_user_data == "":
                 return self.app_queue.put_nowait(
@@ -196,7 +198,7 @@ class BackgroundServer:
                         "message_type": "message",
                         "message": f"offset user data is: {offset_user_data} \nData offset: {data_offset}"
                     }
-                )
+                ) + "DONE"
             )
 
             for offset_service in offset_user_data.keys():
@@ -214,24 +216,87 @@ class BackgroundServer:
                         string_to_deoffset=offset_user_data[offset_service][offset_username]["password"],
                         data_offset=data_offset
                     )
-                    key = deoffset_string(
-                        string_to_deoffset=offset_user_data[offset_service][offset_username]["key"],
-                        data_offset=data_offset
+                    # key = deoffset_string(
+                    #     string_to_deoffset=offset_user_data[offset_service][offset_username]["key"],
+                    #     data_offset=data_offset
+                    # )
+
+                    key = Fernet.generate_key()
+
+                    # if offset_user_data[offset_service][offset_username]["iv"] == "":
+                    #     iv = ""
+                    #
+                    # else:
+                    #     iv = deoffset_string(
+                    #         string_to_deoffset=offset_user_data[offset_service][offset_username]["iv"],
+                    #         data_offset=data_offset
+                    #     )
+
+                    self.app_queue.put_nowait(
+                        json.dumps(
+                            {
+                                "message_type": "message",
+                                "message": f"Key is: {key}"
+                            }
+                        ) + "DONE"
                     )
 
-                    if offset_user_data[offset_service][offset_username]["iv"] == "":
-                        offset_iv = ""
+                    encrypted_password = encrypt_data(data_to_encrypt=password, key_to_use=key)["encrypted_data"]
+                    encrypted_key, encryption_iv = encrypt_data(data_to_encrypt=key).values()
+
+                    if isinstance(encrypted_password, bytes):
+                        encrypted_password = encrypted_password.decode()
+
+                    if isinstance(encrypted_key, bytes):
+                        encrypted_key = encrypted_key.decode()
+
+                    if isinstance(encryption_iv, bytes):
+                        encryption_iv = encryption_iv.decode()
+
+                    if service in deoffset_user_data.keys():
+                        deoffset_user_data[service][username] = {
+                            "password": encrypted_password,
+                            "key": encrypted_key
+                        }
 
                     else:
-                        offset_iv = deoffset_string(
-                            string_to_deoffset=offset_user_data[offset_service][offset_username]["iv"],
-                            data_offset=data_offset
-                        )
+                        deoffset_user_data[service] = {
+                            username: {
+                                "password": encrypted_password,
+                                "key": encrypted_key
+                            }
+                        }
 
-                print(service)
+                    if toga.platform.current_platform.lower() == "android":
+                        deoffset_user_data[service][username]["iv"] = encryption_iv
 
-            # TODO: Can't continue without offset string!!!
-            # data = [offset_list[offset_list.index(character)] for character in offset_data.split(" ") if character[-1] != "!"]
+            user_data = load_user_data(self.data_path)
+
+            if "data" not in user_data.keys():
+                user_data["data"] = {}
+
+            for service in deoffset_user_data.keys():
+                for username in deoffset_user_data[service].keys():
+                    if service in user_data["data"].keys() and username in user_data["data"][service].keys():
+                        user_data["data"][service][username] = {
+                            "password": encrypted_password,
+                            "key": encrypted_key
+                        }
+
+                    else:
+                        user_data["data"][service] = deoffset_user_data[service]
+
+            with open(self.data_path, mode="w") as data_file:
+                json.dump(user_data, data_file, indent=4)
+
+            self.app_queue.put_nowait(
+                json.dumps(
+                    {
+                        "message_type": "gui_message",
+                        "message": "Successfully migrated data!"
+                    }
+                ) + "DONE"
+            )
 
         else:
             self.app_queue.put_nowait(
@@ -328,30 +393,36 @@ class BackgroundServer:
                 )
 
                 for username in user_data[service].keys():
-                    offset_username = offset_string(username, offset_number)[0]
-                    offset_password = offset_string(user_data[service][username]["password"], offset_number)[0]
-                    offset_key = offset_string(user_data[service][username]["key"], offset_number)[0]
-
-                    if "iv" in user_data[service][username].keys():
-                        offset_iv = offset_string(user_data[service][username]["iv"], offset_number)[0]
+                    if toga.platform.current_platform.lower() == "android":
+                        decrypted_key = decrypt_data(data_to_decrypt=user_data[service][username]["key"], iv=user_data[service][username]["iv"])
 
                     else:
-                        offset_iv = ""
-                        
+                        decrypted_key = decrypt_data(data_to_decrypt=user_data[service][username]["key"])
+
+                    offset_username = offset_string(username, offset_number)[0]
+                    offset_password = offset_string(decrypt_data(data_to_decrypt=user_data[service][username]["password"], key_to_use=decrypted_key), offset_number)[0]
+                    # offset_key = offset_string(decrypted_key, offset_number)[0]
+
+                    # if "iv" in user_data[service][username].keys():
+                    #     offset_iv = offset_string(user_data[service][username]["iv"], offset_number)[0]
+                    #
+                    # else:
+                    #     offset_iv = ""
+
                     if offset_service not in offset_user_data.keys():
                         offset_user_data[offset_service] = {
                             offset_username: {
                                 "password": offset_password,
-                                "key": offset_key,
-                                "iv": offset_iv
+                                # "key": offset_key,
+                                # "iv": offset_iv
                             }
                         }
-                        
+
                     else:
                         offset_user_data[offset_service][offset_username] = {
                             "password": offset_password,
-                            "key": offset_key,
-                            "iv": offset_iv
+                            # "key": offset_key,
+                            # "iv": offset_iv
                         }
 
             self.send_data(
