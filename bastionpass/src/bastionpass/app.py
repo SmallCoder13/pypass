@@ -1842,6 +1842,7 @@ class BastionPass(toga.App):
     def send_required_input(self, _=None, input_message: str="", function_requiring_input: str="", param_name: str=""):
         if input_message == "":
             print(f"param_name is: {param_name}")
+            print(f"message is: {self.required_input.value}")
 
             self.server_queue.put_nowait(
                 json.dumps(

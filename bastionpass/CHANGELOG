@@ -68,5 +68,7 @@
 * Got data migration working from pypass to bastion pass except on android
 
 ## 1.0.0 (27 August 2026)
+* Fix bug causing legacy data transfer to fail when no data already saved on receiving device
+* Fix bug preventing already existing services/usernames to be overwritten in data transfer
 * Fix saved legacy received data to wrong file
 * Add file cleanup after receiving data

@@ -379,6 +379,9 @@ def deoffset_string(string_to_deoffset: str, data_offset: int):
     deoffset_data = ""
 
     for character_data in string_to_deoffset.split(" "):
+        
+        print(f"Character data is: {character_data}")
+
         if character_data == "":
             continue
 

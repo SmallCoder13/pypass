@@ -173,6 +173,9 @@ class BackgroundServer:
         user_data = json_repair.loads(user_data)["data"]
         new_user_data = {}
 
+        if "data" not in saved_user_data.keys():
+            saved_user_data["data"] = {}
+
         if user_data == "":
             return self.app_queue.put_nowait(
                 json.dumps(
@@ -365,14 +368,14 @@ class BackgroundServer:
 
             for service in deoffset_user_data.keys():
                 for username in deoffset_user_data[service].keys():
-                    if service in user_data["data"].keys() and username in user_data["data"][service].keys():
+                    if service in user_data["data"].keys():
                         user_data["data"][service][username] = {
                             "password": deoffset_user_data[service][username]["password"],
                             "key": deoffset_user_data[service][username]["key"]
                         }
 
-                    elif service in user_data["data"].keys() and username not in user_data["data"][service].keys():
-                        user_data[service] = {
+                    elif service not in user_data["data"].keys():
+                        user_data["data"][service] = {
                             username: {
                                 "password": deoffset_user_data[service][username]["password"],
                                 "key": deoffset_user_data[service][username]["key"]
