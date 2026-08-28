@@ -62,3 +62,11 @@
 * Add missing comma between '-' and '!' characters
 * Get receiving data functionality mostly working
 * Fix app crashing on Ubuntu
+
+## 1.0.0 (26 August 2026)
+* Fix data migration so if service and username already exists on receiving device, existing password will be overwritten
+* Got data migration working from pypass to bastion pass except on android
+
+## 1.0.0 (27 August 2026)
+* Fix saved legacy received data to wrong file
+* Add file cleanup after receiving data

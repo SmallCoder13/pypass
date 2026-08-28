@@ -2,7 +2,7 @@
 # import toga
 # from toga.app import App as BastionPass
 # from toga.platform import current_platform
-
+import json
 import queue
 import uvicorn
 import asyncio
@@ -46,7 +46,6 @@ class BackgroundServer:
 
     def __init__(self, port: int, data_path: Path, username: str, server_queue: Queue, app_queue: Queue):
         try:
-
             self.server_queue: asyncio.Queue = server_queue
             self.app_queue: asyncio.Queue = app_queue
             self.shutdown_in_progress: bool = False
@@ -110,6 +109,14 @@ class BackgroundServer:
                 methods=["POST"]
             )
 
+            self.fast_api.add_api_route(
+                path="/{current_user}/{user_data}/{main_key}",
+                endpoint=self.legacy_receive_data,
+                methods=["POST"]
+            )
+
+            self.fast_api.add_exception_handler(Exception, self.handle_exception)
+
             # self.app_queue.put_nowait("Finished adding first and second route DONE")
             self.app_queue.put_nowait(
                 json.dumps(
@@ -160,6 +167,87 @@ class BackgroundServer:
             )
             # self.app_queue.put_nowait(f"Error {e}")
             return False
+
+    def legacy_receive_data(self, current_user: str, user_data: str, main_key: str):
+        saved_user_data = load_user_data(self.data_path)
+        user_data = json_repair.loads(user_data)["data"]
+        new_user_data = {}
+
+        if user_data == "":
+            return self.app_queue.put_nowait(
+                json.dumps(
+                    {
+                        "message_type": "error",
+                        "message": f"Invalid data received via legacy transfer. Data: {user_data}"
+                    }
+                ) + "DONE"
+            )
+
+        self.app_queue.put_nowait(
+            json.dumps(
+                {
+                    "message_type": "message",
+                    "message": f"Data received via legacy transfer: {user_data}"
+                }
+            ) + "DONE"
+        )
+
+        for service in user_data.keys():
+            for username in user_data[service].keys():
+                old_encrypted_password = user_data[service][username]["password"]
+                old_encrypted_key = user_data[service][username]["key"]
+
+                encryption_key = decrypt_data(data_to_decrypt=old_encrypted_key, key_to_use=main_key)
+                decrypted_password = decrypt_data(data_to_decrypt=old_encrypted_password, key_to_use=encryption_key)
+
+                new_encryption_key = Fernet.generate_key().decode()
+                new_encrypted_password = encrypt_data(data_to_encrypt=decrypted_password, key_to_use=new_encryption_key)["encrypted_data"]
+                new_encrypted_key, iv_used = encrypt_data(data_to_encrypt=new_encryption_key).values()
+
+                if isinstance(new_encrypted_password, bytes):
+                    new_encrypted_password = new_encrypted_password.decode()
+
+                if isinstance(new_encrypted_key, bytes):
+                    new_encrypted_key = new_encrypted_key.decode()
+
+                if service in new_user_data.keys():
+                    new_user_data[service][username] = {
+                        "password": new_encrypted_password,
+                        "key": new_encrypted_key
+                    }
+
+                else:
+                    new_user_data[service] = {
+                        username: {
+                            "password": new_encrypted_password,
+                            "key": new_encrypted_key
+                        }
+                    }
+
+                if toga.platform.current_platform.lower() == "android":
+                    new_user_data[service][username]["iv"] = iv_used
+
+        for service in new_user_data.keys():
+            for username in new_user_data[service].keys():
+                if service in saved_user_data["data"].keys():
+                    saved_user_data["data"][service][username] = new_user_data[service][username]
+
+                else:
+                    saved_user_data["data"][service] = new_user_data[service]
+
+        with open(self.data_path, mode="w") as saved_data_file:
+            json.dump(saved_user_data, saved_data_file, indent=4)
+
+        Path(toga.App.app.paths.data, f"legacy_received_data_for_{current_user}.json").unlink(missing_ok=True)
+
+        self.app_queue.put_nowait(
+            json.dumps(
+                {
+                    "message_type": "gui_message",
+                    "message": "Successfully migrated data via legacy transfer"
+                }
+            ) + "DONE"
+        )
 
     def receive_data(self, data_offset: int = 0, offset_string: str = ""):
 
@@ -241,8 +329,8 @@ class BackgroundServer:
                         ) + "DONE"
                     )
 
-                    encrypted_password = encrypt_data(data_to_encrypt=password, key_to_use=key)["encrypted_data"]
-                    encrypted_key, encryption_iv = encrypt_data(data_to_encrypt=key).values()
+                    encrypted_password = encrypt_data(data_to_encrypt=password, key_to_use=key.decode())["encrypted_data"]
+                    encrypted_key, encryption_iv = encrypt_data(data_to_encrypt=key.decode()).values()
 
                     if isinstance(encrypted_password, bytes):
                         encrypted_password = encrypted_password.decode()
@@ -279,15 +367,35 @@ class BackgroundServer:
                 for username in deoffset_user_data[service].keys():
                     if service in user_data["data"].keys() and username in user_data["data"][service].keys():
                         user_data["data"][service][username] = {
-                            "password": encrypted_password,
-                            "key": encrypted_key
+                            "password": deoffset_user_data[service][username]["password"],
+                            "key": deoffset_user_data[service][username]["key"]
+                        }
+
+                    elif service in user_data["data"].keys() and username not in user_data["data"][service].keys():
+                        user_data[service] = {
+                            username: {
+                                "password": deoffset_user_data[service][username]["password"],
+                                "key": deoffset_user_data[service][username]["key"]
+                            }
                         }
 
                     else:
-                        user_data["data"][service] = deoffset_user_data[service]
+                        self.app_queue.put_nowait(
+                            json.dumps(
+                                {
+                                    "message_type": "error",
+                                    "message": f"Unexpected case for service and username. Service is: {service} Username: {username}"
+                                }
+                            ) + "DONE"
+                        )
+
+                    if toga.platform.current_platform.lower() == "android":
+                        user_data["data"][service][username]["iv"] = deoffset_user_data[service][username]["iv"]
 
             with open(self.data_path, mode="w") as data_file:
                 json.dump(user_data, data_file, indent=4)
+
+            Path(toga.App.app.paths.cache, ".offset_data.txt").unlink(missing_ok=True)
 
             self.app_queue.put_nowait(
                 json.dumps(
@@ -525,3 +633,13 @@ class BackgroundServer:
                 ) + "DONE"
             )
             # self.app_queue.put_nowait(f"An error occurred while listening for messages. Error {traceback.format_exc()}")
+
+    def handle_exception(self, *args, **kwargs):
+        self.app_queue.put_nowait(
+            json.dumps(
+                {
+                    "message_type": "error",
+                    "message": f"An unhandled exception occurred: Args: {args} Kwargs: {kwargs}"
+                }
+            ) + "DONE"
+        )

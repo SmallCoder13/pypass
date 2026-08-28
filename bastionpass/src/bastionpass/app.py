@@ -1,8 +1,8 @@
 """
 A cross-platform password manager written in python
 """
-import json
-import random
+# import json
+# import random
 
 # Data Structure
 
@@ -58,8 +58,7 @@ if toga.platform.current_platform.lower() == "android" or "window" in toga.platf
 else:
     import pyperclip
 
-# Transfer migration ability from migration server to background server
-# Command successfully sent to server and send functionality working. Work on adding Connection Refused handling
+# TODO: Fix data migration from pypass to bastion pass on android
 
 class BastionPass(toga.App):
     async def on_running(self):
