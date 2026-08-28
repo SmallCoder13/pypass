@@ -58,7 +58,7 @@ if toga.platform.current_platform.lower() == "android" or "window" in toga.platf
 else:
     import pyperclip
 
-# TODO: Fix data migration from pypass to bastion pass on android
+# TODO: Fix data migration from bastion pass to bastion pass. Offset of data appears to be scrambled
 
 class BastionPass(toga.App):
     async def on_running(self):
