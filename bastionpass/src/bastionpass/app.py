@@ -142,6 +142,11 @@ class BastionPass(toga.App):
             order=2
         )
 
+        miscellaneous_group = toga.Group(
+            text="Miscellaneous Commands",
+            order=3
+        )
+
         send_passwords_command = toga.Command(
             action=self.send_data,
             group=password_group,
@@ -174,6 +179,13 @@ class BastionPass(toga.App):
             group=offset_group,
             text="Trigger deoffset data",
             order=1
+        )
+
+        return_to_home_command = toga.Command(
+            action=self.return_home_command,
+            group=miscellaneous_group,
+            text="Return to Home Screen",
+            order=0
         )
 
         self.selection_style = Pack(
@@ -215,6 +227,7 @@ class BastionPass(toga.App):
         self.commands.add(get_server_details_command)
         self.commands.add(trigger_offset_command)
         self.commands.add(trigger_deoffset_command)
+        self.commands.add(return_to_home_command)
 
         self.paths.data.mkdir(parents=True, exist_ok=True)
         self.paths.logs.mkdir(parents=True, exist_ok=True)
@@ -227,6 +240,8 @@ class BastionPass(toga.App):
 
         self.main_window.content = main_scroll
         self.main_window.show()
+
+        print(self.paths.cache)
 
     async def recover_key(self, _):
         if toga.platform.current_platform != "android":
@@ -273,6 +288,13 @@ class BastionPass(toga.App):
 
             await self.dialog(dialog)
             return None
+
+    def return_home_command(self, _=None):
+        if hasattr(self, "logged_in_user") and self.logged_in_user != "":
+            self.return_to_home_screen()
+
+        else:
+            self.return_to_home_screen(logged_in=False)
 
     def return_to_home_screen(self, _=None, logged_in=True):
         if logged_in:
@@ -1840,6 +1862,7 @@ class BastionPass(toga.App):
                 print(f"COMMAND SEND ADDRESS {self.address_input.value} PORT {os.environ['PORT']} PATH {self.data_file_path} DONE")
 
     def send_required_input(self, _=None, input_message: str="", function_requiring_input: str="", param_name: str=""):
+        print("Send required input called")
         if input_message == "":
             print(f"param_name is: {param_name}")
             print(f"message is: {self.required_input.value}")
@@ -1855,28 +1878,32 @@ class BastionPass(toga.App):
                 ) + "DONE"
             )
 
-        required_label = toga.Label(
-            text=input_message,
-            style=self.label_style
-        )
+            del self.required_input
 
-        self.required_input = toga.TextInput(style=self.input_style)
+        else:
+            print("Got sent to else statement")
+            required_label = toga.Label(
+                text=input_message,
+                style=self.label_style
+            )
 
-        submit_data_button = toga.Button(
-            text="Submit Data",
-            on_press=partial(self.send_required_input, input_message="", function_requiring_input=function_requiring_input, param_name=param_name),
-            style=self.button_style
-        )
+            self.required_input = toga.TextInput(style=self.input_style)
 
-        add_to_screen(
-            widgets_to_add=(
-                required_label,
-                self.required_input,
-                submit_data_button
-            ),
-            box_to_add_to=self.a_box,
-            clear_screen=True
-        )
+            submit_data_button = toga.Button(
+                text="Submit Data",
+                on_press=partial(self.send_required_input, input_message="", function_requiring_input=function_requiring_input, param_name=param_name),
+                style=self.button_style
+            )
+
+            add_to_screen(
+                widgets_to_add=(
+                    required_label,
+                    self.required_input,
+                    submit_data_button
+                ),
+                box_to_add_to=self.a_box,
+                clear_screen=True
+            )
 
     def display_gui_message(self, gui_message: str):
         # return exec(f"await self.dialog(toga.{dialog_type.title()}Dialog(title={self.success_title}, message={gui_message}))")
@@ -1939,39 +1966,43 @@ class BastionPass(toga.App):
 
                         print(f"Message from server object: {message_from_server}")
 
-                        if message_from_server["message_type"] == "error":
-                            print("Received error message from server")
+                        if not isinstance(message_from_server, list):
+                            messages_from_server = [message_from_server]
 
-                            dialog = toga.ErrorDialog(
-                                title=self.error_title,
-                                message=message_from_server["message"]
-                            )
+                            for message in messages_from_server:
+                                if message["message_type"] == "error":
+                                    print("Received error message from server")
 
-                            await self.dialog(dialog)
-                            return self.return_to_home_screen()
+                                    dialog = toga.ErrorDialog(
+                                        title=self.error_title,
+                                        message=message["message"]
+                                    )
 
-                        elif message_from_server["message_type"] == "error_with_traceback":
-                            dialog = toga.StackTraceDialog(
-                                title=self.error_title,
-                                message=message_from_server["message"],
-                                content=message_from_server["traceback"]
-                            )
+                                    await self.dialog(dialog)
+                                    return self.return_to_home_screen()
 
-                            await self.dialog(dialog)
-                            return self.return_to_home_screen()
+                                elif message["message_type"] == "error_with_traceback":
+                                    dialog = toga.StackTraceDialog(
+                                        title=self.error_title,
+                                        message=message["message"],
+                                        content=message["traceback"]
+                                    )
+
+                                    await self.dialog(dialog)
+                                    return self.return_to_home_screen()
 
 
-                        elif message_from_server["message_type"] == "input_required":
-                            self.send_required_input(
-                                input_message=message_from_server["message"],
-                                function_requiring_input=message_from_server["function"],
-                                param_name=message_from_server["param"]
-                            )
+                                elif message["message_type"] == "input_required":
+                                    self.send_required_input(
+                                        input_message=message["message"],
+                                        function_requiring_input=message["function"],
+                                        param_name=message["param"]
+                                    )
 
-                        elif message_from_server["message_type"] == "gui_message":
-                            self.display_gui_message(
-                                gui_message=message_from_server["message"]
-                            )
+                                elif message_from_server["message_type"] == "gui_message":
+                                    self.display_gui_message(
+                                        gui_message=message["message"]
+                                    )
 
                         message_complete = True
                         message_from_server: str = ""

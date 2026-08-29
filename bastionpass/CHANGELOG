@@ -72,3 +72,12 @@
 * Fix bug preventing already existing services/usernames to be overwritten in data transfer
 * Fix saved legacy received data to wrong file
 * Add file cleanup after receiving data
+
+## 1.0.0 (28 August 2026)
+* Fix offset_user_data not being reset after data transfer, preventing multiple data transfer between app start from working
+* Cleanup print statements in utils.py
+
+#1.0.0 (29 August 2026)
+* Add data offset parameter to offset_string when offset_number is equal to zero
+* Delete debug_server.py and migration_server.py as they are no longer needed
+* Cleanup background_server.py file

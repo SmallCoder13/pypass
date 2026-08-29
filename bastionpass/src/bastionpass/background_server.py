@@ -1,14 +1,8 @@
-# import json
-# import toga
-# from toga.app import App as BastionPass
-# from toga.platform import current_platform
-import json
 import queue
 import uvicorn
 import asyncio
 import threading
 import traceback
-import json_repair
 from .utils import *
 from pathlib import Path
 from fastapi import FastAPI
@@ -28,16 +22,8 @@ class BackgroundServer:
                 }
             ) + "DONE"
         )
-        # self.app_queue.put_nowait("FastAPI app started DONE")
-        # asyncio.create_task(
-        #     asyncio.to_thread(
-        #         app_object.app_queue.put_nowait,
-        #         "Lifespan thingy called DONE"
-        #     )
-        # )
 
         message_listener = asyncio.create_task(self.message_listener())
-        # asyncio.create_task(self.command_listener())
 
         yield
 
@@ -54,7 +40,6 @@ class BackgroundServer:
             self.username: str = username
             self.port = port
 
-            # self.app_queue.put_nowait("Adding endpoints DONE")
             self.app_queue.put_nowait(
                 json.dumps(
                     {
@@ -65,7 +50,6 @@ class BackgroundServer:
             )
             self.add_endpoints()
 
-            # self.app_queue.put_nowait("Starting server DONE")
             self.app_queue.put_nowait(
                 json.dumps(
                     {
@@ -89,11 +73,9 @@ class BackgroundServer:
                     }
                 )
             )
-            # self.app_queue.put_nowait(f"Error {e}")
 
     def add_endpoints(self):
         try:
-            # self.app_queue.put_nowait("Adding first and second route DONE")
             self.app_queue.put_nowait(
                 json.dumps(
                     {
@@ -117,7 +99,6 @@ class BackgroundServer:
 
             self.fast_api.add_exception_handler(Exception, self.handle_exception)
 
-            # self.app_queue.put_nowait("Finished adding first and second route DONE")
             self.app_queue.put_nowait(
                 json.dumps(
                     {
@@ -136,7 +117,6 @@ class BackgroundServer:
                     }
                 ) + "DONE"
             )
-            # self.app_queue.put_nowait(f"Error: {e}")
 
     def start_server(self):
         """
@@ -165,7 +145,6 @@ class BackgroundServer:
                     }
                 )
             )
-            # self.app_queue.put_nowait(f"Error {e}")
             return False
 
     def legacy_receive_data(self, current_user: str, user_data: str, main_key: str):
@@ -253,7 +232,6 @@ class BackgroundServer:
         )
 
     def receive_data(self, data_offset: int = 0, offset_string: str = ""):
-
         if data_offset == 0 and offset_string != "":
             self.app_queue.put_nowait(
                 json.dumps(
@@ -265,13 +243,20 @@ class BackgroundServer:
                     }
                 ) + "DONE"
             )
-
             with open(Path(toga.App.app.paths.cache, ".offset_data.txt"), mode="w") as offset_file:
                 json.dump(offset_string, offset_file, indent=4)
-
+            self.app_queue.put_nowait(
+                json.dumps(
+                    {
+                        "message_type": "message",
+                        "message": "Dumped data into offset file"
+                    }
+                )
+            )
         elif offset_string == "" and data_offset != 0:
             offset_user_data = json_repair.loads(json_repair.from_file(Path(toga.App.app.paths.cache, ".offset_data.txt")))
-            deoffset_user_data = {}
+            Path(toga.App.app.paths.cache, ".offset_data.txt").unlink(missing_ok=True)
+            user_data = {} if "data" not in load_user_data(self.data_path).keys() else load_user_data(self.data_path)["data"]
 
             if offset_user_data == "":
                 return self.app_queue.put_nowait(
@@ -293,112 +278,79 @@ class BackgroundServer:
             )
 
             for offset_service in offset_user_data.keys():
-                service = deoffset_string(
-                    string_to_deoffset=offset_service,
-                    data_offset=data_offset
-                )
-
-                for offset_username in offset_user_data[offset_service].keys():
-                    username = deoffset_string(
-                        string_to_deoffset=offset_username,
+                try:
+                    service = deoffset_string(
+                        string_to_deoffset=offset_service,
                         data_offset=data_offset
                     )
-                    password = deoffset_string(
-                        string_to_deoffset=offset_user_data[offset_service][offset_username]["password"],
-                        data_offset=data_offset
-                    )
-                    # key = deoffset_string(
-                    #     string_to_deoffset=offset_user_data[offset_service][offset_username]["key"],
-                    #     data_offset=data_offset
-                    # )
 
-                    key = Fernet.generate_key()
+                    for offset_username in offset_user_data[offset_service].keys():
+                        username = deoffset_string(
+                            string_to_deoffset=offset_username,
+                            data_offset=data_offset
+                        )
 
-                    # if offset_user_data[offset_service][offset_username]["iv"] == "":
-                    #     iv = ""
-                    #
-                    # else:
-                    #     iv = deoffset_string(
-                    #         string_to_deoffset=offset_user_data[offset_service][offset_username]["iv"],
-                    #         data_offset=data_offset
-                    #     )
+                        password = deoffset_string(
+                            string_to_deoffset=offset_user_data[offset_service][offset_username]["password"],
+                            data_offset=data_offset
+                        )
 
-                    self.app_queue.put_nowait(
-                        json.dumps(
-                            {
-                                "message_type": "message",
-                                "message": f"Key is: {key}"
-                            }
-                        ) + "DONE"
-                    )
+                        key = Fernet.generate_key()
 
-                    encrypted_password = encrypt_data(data_to_encrypt=password, key_to_use=key.decode())["encrypted_data"]
-                    encrypted_key, encryption_iv = encrypt_data(data_to_encrypt=key.decode()).values()
-
-                    if isinstance(encrypted_password, bytes):
-                        encrypted_password = encrypted_password.decode()
-
-                    if isinstance(encrypted_key, bytes):
-                        encrypted_key = encrypted_key.decode()
-
-                    if isinstance(encryption_iv, bytes):
-                        encryption_iv = encryption_iv.decode()
-
-                    if service in deoffset_user_data.keys():
-                        deoffset_user_data[service][username] = {
-                            "password": encrypted_password,
-                            "key": encrypted_key
-                        }
-
-                    else:
-                        deoffset_user_data[service] = {
-                            username: {
-                                "password": encrypted_password,
-                                "key": encrypted_key
-                            }
-                        }
-
-                    if toga.platform.current_platform.lower() == "android":
-                        deoffset_user_data[service][username]["iv"] = encryption_iv
-
-            user_data = load_user_data(self.data_path)
-
-            if "data" not in user_data.keys():
-                user_data["data"] = {}
-
-            for service in deoffset_user_data.keys():
-                for username in deoffset_user_data[service].keys():
-                    if service in user_data["data"].keys():
-                        user_data["data"][service][username] = {
-                            "password": deoffset_user_data[service][username]["password"],
-                            "key": deoffset_user_data[service][username]["key"]
-                        }
-
-                    elif service not in user_data["data"].keys():
-                        user_data["data"][service] = {
-                            username: {
-                                "password": deoffset_user_data[service][username]["password"],
-                                "key": deoffset_user_data[service][username]["key"]
-                            }
-                        }
-
-                    else:
                         self.app_queue.put_nowait(
                             json.dumps(
                                 {
-                                    "message_type": "error",
-                                    "message": f"Unexpected case for service and username. Service is: {service} Username: {username}"
+                                    "message_type": "message",
+                                    "message": f"Key is: {key}"
                                 }
                             ) + "DONE"
                         )
 
-                    if toga.platform.current_platform.lower() == "android":
-                        user_data["data"][service][username]["iv"] = deoffset_user_data[service][username]["iv"]
+                        encrypted_password = encrypt_data(data_to_encrypt=password, key_to_use=key.decode())["encrypted_data"]
+                        encrypted_key, encryption_iv = encrypt_data(data_to_encrypt=key.decode()).values()
+
+                        if isinstance(encrypted_password, bytes):
+                            encrypted_password = encrypted_password.decode()
+
+                        if isinstance(encrypted_key, bytes):
+                            encrypted_key = encrypted_key.decode()
+
+                        if isinstance(encryption_iv, bytes):
+                            encryption_iv = encryption_iv.decode()
+
+                        if service in user_data.keys():
+                            user_data[service][username] = {
+                                "password": encrypted_password,
+                                "key": encrypted_key
+                            }
+
+                        else:
+                            user_data[service] = {
+                                username: {
+                                    "password": encrypted_password,
+                                    "key": encrypted_key
+                                }
+                            }
+
+                        if toga.platform.current_platform.lower() == "android":
+                            user_data[service][username]["iv"] = encryption_iv
+
+                except IndexError:
+                    self.app_queue.put_nowait(
+                        json.dumps(
+                            {
+                                "message_type": "error_with_traceback",
+                                "message": "Unable to save received data. Either the received data was invalid or the data offset was wrong",
+                                "traceback": traceback.format_exc()
+                            }
+                        ) + "DONE"
+                    )
+
+            saved_user_data = load_user_data(self.data_path)
+            saved_user_data["data"] = user_data
 
             with open(self.data_path, mode="w") as data_file:
-                json.dump(user_data, data_file, indent=4)
-
-            Path(toga.App.app.paths.cache, ".offset_data.txt").unlink(missing_ok=True)
+                json.dump(saved_user_data, data_file, indent=4)
 
             self.app_queue.put_nowait(
                 json.dumps(
@@ -418,7 +370,6 @@ class BackgroundServer:
                     }
                 ) + "DONE"
             )
-
 
     def send_data(self, offset_data: dict, receiving_address: str, receiving_port: int):
         self.app_queue.put_nowait(
@@ -463,16 +414,15 @@ class BackgroundServer:
                     }
                 )
             )
-            # self.app_queue.put_nowait("ERROR: Unable to connect to receiving device. Please make sure receiving device is ready to receive data and connected to the same network.")
 
     def search_for_command(self, message_to_search: dict):
-        offset_user_data = {}
 
         if message_to_search["command"] == "send":
+            offset_user_data = {}
             user_data = load_user_data(password_file_path=Path(message_to_search["path"]))["data"]
 
             if user_data == "Password file path doesn't exist":
-                self.app_queue.put_nowait(
+                return self.app_queue.put_nowait(
                     json.dumps(
                         {
                             "message_type": "error",
@@ -482,7 +432,7 @@ class BackgroundServer:
                 )
 
             elif user_data == "Invalid data saved":
-                self.app_queue.put_nowait(
+                return self.app_queue.put_nowait(
                     json.dumps(
                         {
                             "message_type": "error",
@@ -491,49 +441,43 @@ class BackgroundServer:
                     ) + "DONE"
                 )
 
+            offset_number = 0
             for service in user_data.keys():
-                offset_service, offset_number = offset_string(service)
+
+                if offset_number == 0:
+                    offset_service, offset_number = offset_string(service)
+                else:
+                    offset_service = offset_string(service, offset_number)[0]
 
                 self.app_queue.put_nowait(
                     json.dumps(
                         {
                             "message_type": "message",
-                            "message": f"Service data is: {user_data[service]}"
+                            "message": f"Service is: {service}. Data offset is: {offset_number}"
                         }
                     ) + "DONE"
                 )
 
                 for username in user_data[service].keys():
                     if toga.platform.current_platform.lower() == "android":
-                        decrypted_key = decrypt_data(data_to_decrypt=user_data[service][username]["key"], iv=user_data[service][username]["iv"])
+                        decrypted_key = decrypt_data(data_to_decrypt=user_data[service][username]["key"].encode(), iv=user_data[service][username]["iv"])
 
                     else:
-                        decrypted_key = decrypt_data(data_to_decrypt=user_data[service][username]["key"])
+                        decrypted_key = decrypt_data(data_to_decrypt=user_data[service][username]["key"].encode())
 
                     offset_username = offset_string(username, offset_number)[0]
-                    offset_password = offset_string(decrypt_data(data_to_decrypt=user_data[service][username]["password"], key_to_use=decrypted_key), offset_number)[0]
-                    # offset_key = offset_string(decrypted_key, offset_number)[0]
-
-                    # if "iv" in user_data[service][username].keys():
-                    #     offset_iv = offset_string(user_data[service][username]["iv"], offset_number)[0]
-                    #
-                    # else:
-                    #     offset_iv = ""
+                    offset_password = offset_string(decrypt_data(data_to_decrypt=user_data[service][username]["password"].encode(), key_to_use=decrypted_key), offset_number)[0]
 
                     if offset_service not in offset_user_data.keys():
                         offset_user_data[offset_service] = {
                             offset_username: {
-                                "password": offset_password,
-                                # "key": offset_key,
-                                # "iv": offset_iv
+                                "password": offset_password
                             }
                         }
 
                     else:
                         offset_user_data[offset_service][offset_username] = {
-                            "password": offset_password,
-                            # "key": offset_key,
-                            # "iv": offset_iv
+                            "password": offset_password
                         }
 
             self.send_data(
@@ -555,27 +499,6 @@ class BackgroundServer:
 
             exec(f"{message_to_search['function']}({message_to_search['param']}={message_to_search['message']})")
 
-
-        # self.app_queue.put_nowait("Started command listener DONE")
-        # while not self.shutdown_in_progress:
-        #     if self.is_command_complete is True:
-        #         if self.command["COMMAND"] == "SEND":
-        #             offset_data = offset_user_data(
-        #                 user_data=load_user_data(
-        #                     password_file_path=self.command["PATH"]
-        #                 )
-        #             )
-        # 
-        #             self.send_data(
-        #                 offset_data=offset_data,
-        #                 receiving_port=self.command["PORT"],
-        #                 receiving_address=self.command["ADDRESS"]
-        #             )
-        # 
-        #     else:
-        #         await asyncio.sleep(0.01)
-        #         continue
-
     async def message_listener(self):
         message_loop = asyncio.get_running_loop()
         try:
@@ -586,7 +509,6 @@ class BackgroundServer:
                      }
                 ) + "DONE"
             )
-            # self.app_queue.put_nowait("Started message listener DONE")
             message = ""
 
             while not self.shutdown_in_progress:
@@ -596,8 +518,6 @@ class BackgroundServer:
                 except queue.Empty:
                     await asyncio.sleep(0.001)
                     continue
-                # message += await self.server_queue.get()
-                # message = self.comms_pipe.get()
 
                 if isinstance(message, bytes):
                     message = message.decode()
@@ -609,23 +529,14 @@ class BackgroundServer:
                     self.search_for_command(message_to_search=message_as_dictionary)
 
                     message = ""
-                #     self.is_command_complete = True
-                #     message = ""
-                #
-                # elif not message.endswith("DONE") and self.is_command_complete is True:
-                #     self.is_command_complete = False
-                #     self.command += message
 
                 elif message == "SHUTDOWN":
                     self.shutdown_in_progress = True
-                    # self.event_listener_thread.join()
-                    # self.command_executor_thread.join()
-                    # self.server_loop.stop()
 
         except ShutDown:
             self.shutdown_in_progress = True
 
-        except Exception as e:
+        except Exception:
             self.app_queue.put_nowait(
                 json.dumps(
                     {
@@ -635,7 +546,6 @@ class BackgroundServer:
                     }
                 ) + "DONE"
             )
-            # self.app_queue.put_nowait(f"An error occurred while listening for messages. Error {traceback.format_exc()}")
 
     def handle_exception(self, *args, **kwargs):
         self.app_queue.put_nowait(

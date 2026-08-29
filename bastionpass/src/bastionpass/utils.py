@@ -173,8 +173,6 @@ def create_new_user(user_data_path: str, user: str, password: str, main_cipher: 
     else:
         return "Couldn't encrypt password"
 
-    print(f"User_data: \n{user_data}")
-
     os.mkdir(user_data_path)
 
     with open(Path(user_data_path, ".passwords.json"), mode="w") as data_file:
@@ -267,8 +265,6 @@ def get_main_key():
         else:
             key = keyring.get_password("PYPASS", "MAIN_KEY")
 
-    print(f"Retrieved MAIN_KEY: {key}")
-
     return key
 
 
@@ -283,9 +279,6 @@ def decrypt_data(data_to_decrypt: bytes, key_to_use: str="main_key", iv=None) ->
         from java.util import Base64
         from javax.crypto import Cipher
         from javax.crypto.spec import GCMParameterSpec
-
-        print(type(iv))
-        print(iv)
         decryption_iv = Base64.getDecoder().decode(iv)
 
         decryption_cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -300,8 +293,6 @@ def decrypt_data(data_to_decrypt: bytes, key_to_use: str="main_key", iv=None) ->
 
         encrypted_decoded = Base64.getDecoder().decode(data_to_decrypt)
         decrypted_bytes_data = decryption_cipher.doFinal(encrypted_decoded)
-
-        print(f"Decrypted data is: {bytes(decrypted_bytes_data).decode()}")
 
         return bytes(decrypted_bytes_data).decode()
 
@@ -325,9 +316,6 @@ def encrypt_data(data_to_encrypt: str or bytes, key_to_use: str ="main_key") -> 
     if isinstance(data_to_encrypt, str) == True:
         data_to_encrypt = data_to_encrypt.encode()
 
-    print(f"Data to encrypt is: {data_to_encrypt}")
-    print(f"Data to encrypt is of type: {type(data_to_encrypt)}")
-
     assert isinstance(data_to_encrypt, bytes)
 
     if toga.platform.current_platform == "android" and key_to_use == "main_key":
@@ -347,7 +335,6 @@ def encrypt_data(data_to_encrypt: str or bytes, key_to_use: str ="main_key") -> 
         }
 
     else:
-        print(f"Encryption key is: {encryption_key}")
         encrypted_data = Fernet(encryption_key).encrypt(data_to_encrypt)
         return {
             "encrypted_data": encrypted_data,
@@ -379,13 +366,12 @@ def deoffset_string(string_to_deoffset: str, data_offset: int):
     deoffset_data = ""
 
     for character_data in string_to_deoffset.split(" "):
-        
-        print(f"Character data is: {character_data}")
-
         if character_data == "":
             continue
 
-        elif character_data[-1] == "!":
+        print(f"Character data is: {character_data}")
+
+        if character_data[-1] == "!":
             deoffset_data += str(character_data[:-1]).replace("[", "").replace("]", "").replace("'", "").replace(",", "")
 
         elif character_data[-1] == "U":
