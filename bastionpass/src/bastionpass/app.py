@@ -1937,7 +1937,7 @@ class BastionPass(toga.App):
             if self.logged_in_user:
 
                 try:
-                    message_from_server += self.app_queue.get_nowait()
+                    message_from_server += await asyncio.to_thread(self.app_queue.get)
 
                     if isinstance(message_from_server, bytes):
                         message_from_server = message_from_server.decode()

@@ -77,7 +77,10 @@
 * Fix offset_user_data not being reset after data transfer, preventing multiple data transfer between app start from working
 * Cleanup print statements in utils.py
 
-#1.0.0 (29 August 2026)
+## 1.0.0 (29 August 2026)
 * Add data offset parameter to offset_string when offset_number is equal to zero
 * Delete debug_server.py and migration_server.py as they are no longer needed
 * Cleanup background_server.py file
+
+## 1.0.0 (30 August 2026)
+* Fix message listener crashing after dialog pops up on mac
