@@ -93,5 +93,6 @@
 * Update github CI to use `bastionpass` directory instead of `pypass`
 * Replace double quotes with single quotes in github CI
 * Add step to github CI to sign android app on release
+* Remove no longer needed argument for test suite
 * Fix github CI failing when signing android app
 * Fix some typos in pyproject.toml file

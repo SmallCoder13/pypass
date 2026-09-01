@@ -117,8 +117,7 @@ jobs:
            ${{ matrix.output-format }} \
            --test --no-input --log \
            ${{ matrix.briefcase-args }} \
-           ${{ matrix.briefcase-run-args }} \
-           -- --api-key=${{ secrets.API_KEY }}
+           ${{ matrix.briefcase-run-args }}
 
      - name: Package App
        working-directory: ./bastionpass
