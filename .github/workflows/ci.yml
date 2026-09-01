@@ -139,7 +139,7 @@ jobs:
          field: "tool.briefcase.version"
 
      - name: Sign Android APK
-       if: matrix.target == "Android"
+       if: matrix.target == 'Android'
        uses: r0adkll/sign-android-release@v1
        with:
          releaseDirectory: bastionpass/dist/android
