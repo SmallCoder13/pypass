@@ -1,8 +1,6 @@
 name: Create App Artifacts
 on:
  pull_request:
-   branches:
-     - main
 
 # Cancel active CI runs for a PR before starting another run
 concurrency:
@@ -88,18 +86,18 @@ jobs:
          python -m pip install briefcase --break-system-packages
 
      - name: Setup Environment
-       working-directory: ./pypass
+       working-directory: ./bastionpass
        run: |
          # Use GitHub's preinstalled JDK 17 for Android builds
          echo JAVA_HOME="${JAVA_HOME_17_X64:-$JAVA_HOME_17_arm64}" | tee -a ${GITHUB_ENV}
          ${{ matrix.pre-command }}
 
      - name: Update briefcase tools
-       working-directory: ./pypass
+       working-directory: ./bastionpass
        run: briefcase upgrade --no-input --log
 
      - name: Build App
-       working-directory: ./pypass
+       working-directory: ./bastionpass
        run: |
          ${{ matrix.briefcase-build-prefix }} \
          briefcase build \
@@ -111,7 +109,7 @@ jobs:
 
      - name: Test App
 
-       working-directory: ./pypass
+       working-directory: ./bastionpass
        run: |
          ${{ matrix.briefcase-run-prefix }} \
          briefcase run \
@@ -123,7 +121,7 @@ jobs:
            -- --api-key=${{ secrets.API_KEY }}
 
      - name: Package App
-       working-directory: ./pypass
+       working-directory: ./bastionpass
        run: |
          ${{ matrix.briefcase-package-prefix }} \
          briefcase package \
@@ -135,32 +133,42 @@ jobs:
 
      - name: Prep Release Data
        uses: SebRollen/toml-action@v1.2.0
-       id: pypass_version
+       id: bastionpass_version
        with:
-         file: "pypass/pyproject.toml"
+         file: "bastionpass/pyproject.toml"
          field: "tool.briefcase.version"
+
+     - name: Sign Android APK
+       if: matrix.target == "Android"
+       working-directory: ./bastionpass
+       uses: r0adkll/sign-android-release@v1
+       with:
+         releaseDirectory: dist/android
+         signingKeyBase64: ${{ secrets.ANDROID_SIGNING_KEY }}
+         alias: ${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}
+         keyStorePassword: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
 
      - name: Check if release tag exists
        uses: bbonkr/git-tag-check-action@v1
        id: release_tag
        with:
-         tag: 'v${{ steps.pypass_version.outputs.value }}'
+         tag: 'v${{ steps.bastionpass_version.outputs.value }}'
          github_token: ${{ secrets.GITHUB_TOKEN }}
 
      - name: Create Tag for new Release
        if: steps.release_tag.outputs.tag == ''
        uses: makethenetgo/actions-create-tag@v1
        with:
-         tag_name: "v${{ steps.pypass_version.outputs.value }}"
+         tag_name: "v${{ steps.bastionpass_version.outputs.value }}"
          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-     - name: Create New PyPass Release
+     - name: Create New Bastion Pass Release
        uses: ncipollo/release-action@v1
        with:
-         tag: "v${{ steps.pypass_version.outputs.value }}"
+         tag: "v${{ steps.bastionpass_version.outputs.value }}"
          draft: true
-         bodyFile: "pypass/CHANGELOG"
-         artifacts: "pypass/dist/*"
+         bodyFile: "bastionpass/CHANGELOG"
+         artifacts: "bastionpass/dist/*"
          allowUpdates: true
        
      - name: Prep Logs
@@ -168,7 +176,7 @@ jobs:
        if: failure()
        uses: vimtor/action-zip@v1.2
        with:
-         files: pypass/logs/*
+         files: bastionpass/logs/*
          dest: logs.zip
 
 
@@ -177,6 +185,6 @@ jobs:
        uses: cinotify/github-action@main
        with:
          to: "SpyridonCoryell@protonmail.com"
-         subject: "PyPass CI ${{ github.run_number }} Workflow log"
-         body: "Github CI workflow ${{ github.run_number }} for PyPass failed. Attached are all available logs."
+         subject: "Bastion Pass CI ${{ github.run_number }} Workflow log"
+         body: "Github CI workflow ${{ github.run_number }} for Bastion Pass failed. Attached are all available logs."
          attachment: "logs.zip"

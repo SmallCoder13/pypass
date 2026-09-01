@@ -88,3 +88,7 @@
 ## 1.0.0 (31 August 2026)
 * Update import_from_file utility to use read().split("\n") instead of readlines()
 * Update test suite and add new tests for new utilities
+
+## 1.0.0 (1 September 2026)
+* Update github CI to use `bastionpass` directory instead of `pypass`
+* Add step to github CI to sign android app on release
