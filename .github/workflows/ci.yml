@@ -78,7 +78,7 @@ jobs:
      - name: Setup Python
        uses: actions/setup-python@v4
        with:
-         python-version: "3.12"
+         python-version: "3.13"
 
      - name: Install Briefcase
        run: |
@@ -141,7 +141,7 @@ jobs:
        if: matrix.target == 'Android'
        uses: r0adkll/sign-android-release@v1
        with:
-         releaseDirectory: bastionpass/dist/android
+         releaseDirectory: ./bastionpass/dist/android
          signingKeyBase64: ${{ secrets.ANDROID_SIGNING_KEY }}
          alias: ${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}
          keyStorePassword: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
