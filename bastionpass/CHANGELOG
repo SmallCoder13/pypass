@@ -95,5 +95,5 @@
 * Add step to github CI to sign android app on release
 * Remove no longer needed argument for test suite
 * Fix github CI failing when signing android app
-* Update python version in CI to python3.13
+* Update python version in CI to python3.14
 * Fix some typos in pyproject.toml file
