@@ -30,10 +30,10 @@ To donate to Bastion Pass use these links:
 	Buy Me A Coffee: buymeacoffee.com/bastionpass
 
 **Source Code**
-The source code for pypass and be found here:
+The source code for Bastion Pass can be found here:
 	https://github.com/coryellcottage/bastion-pass
 
-You can contribute to pypass there, report issues with Bastion Pass, request features, or just give feedback
+You can contribute to Bastion Pass there, report issues with Bastion Pass, request features, or just give feedback
 """
 sources = [
     "src/bastionpass",
