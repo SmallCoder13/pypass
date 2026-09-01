@@ -140,10 +140,9 @@ jobs:
 
      - name: Sign Android APK
        if: matrix.target == "Android"
-       working-directory: ./bastionpass
        uses: r0adkll/sign-android-release@v1
        with:
-         releaseDirectory: dist/android
+         releaseDirectory: bastionpass/dist/android
          signingKeyBase64: ${{ secrets.ANDROID_SIGNING_KEY }}
          alias: ${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}
          keyStorePassword: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}

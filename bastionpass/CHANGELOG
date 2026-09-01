@@ -92,3 +92,4 @@
 ## 1.0.0 (1 September 2026)
 * Update github CI to use `bastionpass` directory instead of `pypass`
 * Add step to github CI to sign android app on release
+* Fix github CI failing when signing android app
