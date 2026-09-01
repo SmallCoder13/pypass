@@ -22,18 +22,18 @@ def test_add_to_screen():
     print("Testing add_to_screen...")
 
     add_to_screen(
-        {
-            "test_button": toga.Button(text="test"),
-            "test_label": toga.Label(text="test", style=toga.style.Pack(margin_top=10))
-        },
+        (
+            toga.Button(text="test"),
+            toga.Label(text="test", style=toga.style.Pack(margin_top=10))
+        ),
         toga.Box()
     )
 
     add_to_screen(
-        {
-            "self.test_entry": toga.TextInput(),
-            "test_label": toga.Label(text="test", style=toga.style.Pack(margin_top=10))
-        },
+        (
+            toga.TextInput(),
+            toga.Label(text="test", style=toga.style.Pack(margin_top=10))
+        ),
         toga.Box(),
         clear_screen=True
     )
@@ -150,3 +150,49 @@ def test_get_main_key():
 def test_encrypt_and_decrypt_data():
     encrypted_data = encrypt_data(data_to_encrypt="Test Text")
     assert decrypt_data(data_to_decrypt=encrypted_data["encrypted_data"], iv=encrypted_data["iv_used"]) == "Test Text"
+
+def test_offset_and_deoffset_string():
+    offset_data, offset_number = offset_string(string_to_offset="Test String")
+
+    assert offset_data == offset_string(string_to_offset="Test String", data_offset=offset_number)[0]
+    assert deoffset_string(string_to_deoffset=offset_data, data_offset=offset_number) == "Test String"
+
+def test_import_from_file():
+    with open(Path(bastion_pass_object.app.paths.data, "import_from_file.txt"), mode="w") as data_file:
+        data_file.write("service1\nusername1\npassword1\n\nservice2\nusername2\npassword2\n")
+
+    imported_data = import_from_file(Path(bastion_pass_object.app.paths.data, "import_from_file.txt"), file_pattern=["service", "username", "password", "ignore"])
+
+    assert imported_data == {"service1": {"username1": "password1"}, "service2": {"username2": "password2"}}
+
+def test_create_backup_phrase():
+    backup_wordlist = {
+        "A": "afraid",
+        "B": "boat",
+        "C": "calculation",
+        "D": "drive",
+        "E": "expense",
+        "F": "feed",
+        "G": "ground",
+        "H": "human",
+        "I": "interrupt",
+        "J": "juice",
+        "K": "keep",
+        "L": "live",
+        "M": "mother",
+        "N": "necessity",
+        "O": "observe",
+        "P": "pocket",
+        "Q": "question",
+        "R": "return",
+        "S": "strap",
+        "T": "truth",
+        "U": "university",
+        "V": "various",
+        "W": "way",
+        "X": "xenomorphically",
+        "Y": "yard",
+        "Z": "zebra",
+    }
+
+    assert [word.replace(" ", "") for word in create_backup_phrase("testphrase", backup_wordlist)] == ["truth", "expense", "strap", "truth", "pocket", "human", "return", "afraid", "strap", "expense"]

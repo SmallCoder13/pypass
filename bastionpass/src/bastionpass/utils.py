@@ -78,6 +78,7 @@ offset_data = [
         "_",
         "-",
         "!",
+        " "
     ]
 
 def recover_key(backup_phrase: list) -> str:
@@ -400,7 +401,7 @@ def import_from_file(path: Path, file_pattern: list):
         return "Path nonexistent"
 
     with open(path) as import_file:
-        file_data = import_file.readlines()
+        file_data = import_file.read().split("\n")
 
     pattern_header: str = ""
     pattern_footer: str = ""
