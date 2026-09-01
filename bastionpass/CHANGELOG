@@ -93,6 +93,7 @@
 * Update github CI to use `bastionpass` directory instead of `pypass`
 * Replace double quotes with single quotes in github CI
 * Add step to github CI to sign android app on release
+* Update OS verison of Ubuntu and Fedora in github CI
 * Remove no longer needed argument for test suite
 * Fix github CI failing when signing android app
 * Update python version in CI to python3.14
