@@ -98,7 +98,9 @@ jobs:
        run: briefcase upgrade --no-input --log
 
      - name: Keyring backends available
-       run: keyring --list-backends
+       run: |
+         pip install keyring --break-system-packages
+         keyring --list-backends
 
      - name: Build App
        working-directory: ./bastionpass
