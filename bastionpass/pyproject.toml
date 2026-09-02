@@ -58,7 +58,7 @@ universal_build = true
 requires = [
     "toga-cocoa~=0.5.0",
     "std-nslog~=1.0.3",
-    "cryptography" # Needed for encryption
+    "cryptography", # Needed for encryption
     "pyperclip" # Needed for clipbaord functionality
 ]
 
@@ -69,7 +69,7 @@ requires = [
     # isn't available on Debian 12/Ubuntu 22.04. If you don't need to support those (or
     # older) releases, you can remove this version pin. See beeware/toga#3143.
 #    "pygobject < 3.52.1",
-    "cryptography" # Needed for encryption
+    "cryptography", # Needed for encryption
     "pyperclip" # Needed for clipbaord functionality
 ]
 
@@ -196,7 +196,7 @@ flatpak_sdk = "org.gnome.Sdk"
 [tool.briefcase.app.bastionpass.windows]
 requires = [
     "toga-winforms~=0.5.0",
-    "cryptography" # Needed for encryption
+    "cryptography", # Needed for encryption
     "git+https://bitbucket.org/TomArn/tatogalib.git@version_2025-02-26"
 ]
 
@@ -209,7 +209,7 @@ requires = [
 
 [tool.briefcase.app.bastionpass.android]
 requires = [
-    "pydantic<2"
+    "pydantic<2",
     "toga-android~=0.5.0",
     "git+https://bitbucket.org/TomArn/tatogalib.git@version_2025-02-26",
     "git+https://github.com/SmallCoder13/custom_wheels/blob/main/cryptography/cryptography-50.0.1-cp313-abi3-android_24_x86_64.whl"

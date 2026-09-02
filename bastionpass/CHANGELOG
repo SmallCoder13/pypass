@@ -99,3 +99,4 @@
 * Fix github CI failing when signing android app
 * Update python version in CI to python3.14
 * Fix some typos in pyproject.toml file
+* Add missing commas to pyproject.toml
