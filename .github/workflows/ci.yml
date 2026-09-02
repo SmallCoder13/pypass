@@ -9,6 +9,7 @@ concurrency:
 
 env:
  FORCE_COLOR: "1"
+ FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 defaults:
  run:
@@ -95,6 +96,9 @@ jobs:
      - name: Update briefcase tools
        working-directory: ./bastionpass
        run: briefcase upgrade --no-input --log
+
+     - name: Keyring backends available
+       run: keyring --list-backends
 
      - name: Build App
        working-directory: ./bastionpass

@@ -83,8 +83,7 @@ system_requires = [
     # remove the pygobject pin in the requires list, you should also change to the
     # version 2.0 of the girepository library. See beeware/toga#3143.
     # "libgirepository1.0-dev",
-    "libgirepository-2.0-dev", 
-    "dbus-python" # Needed for keyring functionality
+    "libgirepository-2.0-dev"
 ]
 
 system_runtime_requires = [

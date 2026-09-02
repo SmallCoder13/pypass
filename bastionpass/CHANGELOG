@@ -90,7 +90,7 @@
 * Update test suite and add new tests for new utilities
 
 ## 1.0.0 (1 September 2026)
-* Add secretstorge, jeepney and dbus-python to linux requirements in hopes of getting keyring to work on fedora
+* Add secretstorge and jeepney to linux requirements in hopes of getting keyring to work on fedora
 * Upgrade version of libgirepository from 1.0 to 2.0 in github CI and pyproject.toml
 * Add separate package index for cryptography python3.13 - python3.15
 * Update github CI to use `bastionpass` directory instead of `pypass`
@@ -101,6 +101,8 @@
 * Remove no longer needed argument for test suite
 * Fix github CI failing when signing android app
 * Update python version in CI to python3.14
+* Add step that lists available keyrings
 * Fix some typos in pyproject.toml file
 * Remove random 'i' from pyproject.toml
 * Add missing commas to pyproject.toml
+* Force github CI to use node 24
