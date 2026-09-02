@@ -106,3 +106,6 @@
 * Remove random 'i' from pyproject.toml
 * Add missing commas to pyproject.toml
 * Force github CI to use node 24
+
+## 1.0.0 (2 September 2026)
+* Remove secretstorage from app requirements, as keyring automattically installs it

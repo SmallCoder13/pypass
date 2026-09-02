@@ -70,9 +70,7 @@ requires = [
     # older) releases, you can remove this version pin. See beeware/toga#3143.
 #    "pygobject < 3.52.1",
     "cryptography", # Needed for encryption
-    "jeepney", # Dependency of keyring package
     "pyperclip", # Needed for clipbaord functionality
-    "secretstorage" # Needed for keyring functionality
 ]
 
 [tool.briefcase.app.bastionpass.linux.system.debian]
