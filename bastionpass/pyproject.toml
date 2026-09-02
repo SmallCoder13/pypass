@@ -70,7 +70,7 @@ requires = [
     # older) releases, you can remove this version pin. See beeware/toga#3143.
 #    "pygobject < 3.52.1",
     "cryptography", # Needed for encryption
-    "pyperclip" # Needed for clipbaord functionality,
+    "pyperclip", # Needed for clipbaord functionality
     "secretstorage" # Needed for keyring functionality
 ]
 
