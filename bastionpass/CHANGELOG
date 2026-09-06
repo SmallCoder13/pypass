@@ -109,3 +109,7 @@
 
 ## 1.0.0 (2 September 2026)
 * Remove secretstorage from app requirements, as keyring automattically installs it
+
+## 1.0.0 (6 September 2026)
+* Add packages to system requirements to debian to ensure keyring works in minimized ubuntu
+* If no keyring is found on linux, start the keyring service

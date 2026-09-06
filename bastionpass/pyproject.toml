@@ -71,6 +71,7 @@ requires = [
 #    "pygobject < 3.52.1",
     "cryptography", # Needed for encryption
     "pyperclip", # Needed for clipbaord functionality
+    "dbus"
 ]
 
 [tool.briefcase.app.bastionpass.linux.system.debian]
@@ -81,7 +82,8 @@ system_requires = [
     # remove the pygobject pin in the requires list, you should also change to the
     # version 2.0 of the girepository library. See beeware/toga#3143.
     # "libgirepository1.0-dev",
-    "libgirepository-2.0-dev"
+    "libgirepository-2.0-dev",
+    "dbus-x11" # Needed for keyboard functionality
 ]
 
 system_runtime_requires = [
@@ -97,7 +99,8 @@ system_runtime_requires = [
     # Needed to provide WebKit2 at runtime
     # Note: Debian 11 requires gir1.2-webkit2-4.0 instead
     # "gir1.2-webkit2-4.1",
-    "xclip" # Needed for pyperclip
+    "xclip", # Needed for pyperclip
+    "gnome-keyring" # Needed for keyring functionality
 ]
 
 [tool.briefcase.app.bastionpass.linux.system.rhel]
