@@ -71,7 +71,6 @@ requires = [
 #    "pygobject < 3.52.1",
     "cryptography", # Needed for encryption
     "pyperclip", # Needed for clipbaord functionality
-    "dbus"
 ]
 
 [tool.briefcase.app.bastionpass.linux.system.debian]
@@ -83,7 +82,8 @@ system_requires = [
     # version 2.0 of the girepository library. See beeware/toga#3143.
     # "libgirepository1.0-dev",
     "libgirepository-2.0-dev",
-    "dbus-x11" # Needed for keyboard functionality
+    "python3-dbus", # Needed for keyring functinality
+    "dbus-x11" # Needed for keyring functionality
 ]
 
 system_runtime_requires = [

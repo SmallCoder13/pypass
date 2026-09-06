@@ -112,4 +112,5 @@
 
 ## 1.0.0 (6 September 2026)
 * Add packages to system requirements to debian to ensure keyring works in minimized ubuntu
+* Remove dbus from python requirements and add it to system package requirements
 * If no keyring is found on linux, start the keyring service
